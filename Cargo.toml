@@ -8,11 +8,12 @@ members = [
     "concrete-csprng",
     "backends/tfhe-cuda-backend",
     "utils/tfhe-versionable",
-    "utils/tfhe-versionable-derive"
+    "utils/tfhe-versionable-derive",
+    "tfhe-rs-cost-model",
+    "concrete-cpu-noise-model",
+    "concrete-security-curves-rust",
 ]
-exclude = [
-    "tfhe/backward_compatibility_tests"
-]
+exclude = ["tfhe/backward_compatibility_tests"]
 
 [profile.bench]
 lto = "fat"

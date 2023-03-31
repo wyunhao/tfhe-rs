@@ -353,7 +353,7 @@ impl<Scalar: UnsignedInteger, C: Container<Element = Scalar>> ContiguousEntityCo
 {
     type Element = C::Element;
 
-    type EntityViewMetadata = GgswCiphertextCreationMetadata<Scalar>;
+    type EntityViewMetadata = GgswCiphertextCreationMetadata<Self::Element>;
 
     type EntityView<'this> = GgswCiphertextView<'this, Self::Element>
     where

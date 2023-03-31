@@ -954,6 +954,33 @@ pub fn polynomial_wrapping_mul<Scalar, OutputCont, LhsCont, RhsCont>(
     polynomial_wrapping_add_mul_assign(output, lhs, rhs);
 }
 
+/// Multiply a polynomial by a scalar.
+///
+/// # Note
+///
+/// Computations wrap around (similar to computing modulo $2^{n\_{bits}}$) when exceeding the
+/// unsigned integer capacity.
+///
+/// # Example
+///
+/// ```
+/// use tfhe::core_crypto::algorithms::polynomial_algorithms::*;
+/// use tfhe::core_crypto::entities::*;
+/// let mut pol = Polynomial::from_container(vec![1u8, 2, 3, 4, 5, 6]);
+/// let scalar = 127u8;
+/// polynomial_wrapping_scalar_mul_assign(&mut pol, scalar);
+/// assert_eq!(pol.as_ref(), &[127u8, 254, 125, 252, 123, 250]);
+/// ```
+pub fn polynomial_wrapping_scalar_mul_assign<Scalar, PolyCont>(
+    output: &mut Polynomial<PolyCont>,
+    scalar: Scalar,
+) where
+    Scalar: UnsignedInteger,
+    PolyCont: ContainerMut<Element = Scalar>,
+{
+    slice_wrapping_scalar_mul_assign(output.as_mut(), scalar)
+}
+
 /// Fill the output polynomial, with the result of the product of two polynomials, reduced modulo
 /// $(X^{N} + 1)$ with the Karatsuba algorithm Complexity: $O(N^{1.58})$
 ///
@@ -1241,6 +1268,126 @@ fn induction_karatsuba_custom_mod<Scalar>(
             &a1,
             custom_modulus,
         );
+    }
+}
+
+/// Apply the automorphism $X \mapsto X^{a}$ where `a` is the `automorphism_exponent` argument of
+/// this function, to the `input` [`Polynomial`] in the ring polynomial ring
+/// $P\left[X\right]/X^N+1$ and add the result to the `output` [`Polynomial`].
+///
+/// # Note
+///
+/// This operation only supports polynomial rings where $N$ is a power of two.
+///
+/// Computations wrap around (similar to computing modulo $2^{n\_{bits}}$) when exceeding the
+/// unsigned integer capacity.
+///
+/// ```rust
+/// use tfhe::core_crypto::algorithms::polynomial_algorithms::*;
+/// use tfhe::core_crypto::prelude::*;
+///
+/// let mut output = Polynomial::new(1u64, PolynomialSize(4));
+/// let input = Polynomial::from_container((0u64..4).collect::<Vec<_>>());
+///
+/// apply_automorphism_wrapping_add_assign(&mut output, &input, 3);
+///
+/// let expected = Polynomial::from_container(vec![1, 4, 18446744073709551615, 2]);
+///
+/// assert_eq!(output, expected);
+/// ```
+pub fn apply_automorphism_wrapping_add_assign<Scalar, OutputCont, PolyCont>(
+    output: &mut Polynomial<OutputCont>,
+    input: &Polynomial<PolyCont>,
+    automorphism_exponent: usize,
+) where
+    Scalar: UnsignedInteger,
+    OutputCont: ContainerMut<Element = Scalar>,
+    PolyCont: Container<Element = Scalar>,
+{
+    // check input and output polynomials have the same size
+    assert_eq!(input.polynomial_size(), output.polynomial_size());
+    let poly_size = input.polynomial_size().0;
+    assert!(poly_size.is_power_of_two());
+    // check the automorphism exponent is odd so the function X -> X^automorphism_exponent is an
+    // automorphism (assumes polysize is a power of 2)
+    assert_eq!(automorphism_exponent % 2, 1);
+
+    // poly_size a power of 2
+    let poly_size_log = poly_size.ilog2();
+    let poly_size_rem_mask = poly_size - 1;
+
+    for (index, coef) in input.iter().enumerate() {
+        let unreduced_new_index = index * automorphism_exponent;
+        let (full_cycles, new_index) = (
+            // Equivalent to dividing by poly_size
+            unreduced_new_index >> poly_size_log,
+            // Equivalent to taking the remainder of the poly_size division
+            unreduced_new_index & poly_size_rem_mask,
+        );
+        if full_cycles % 2 == 0 {
+            output[new_index] = output[new_index].wrapping_add(*coef);
+        } else {
+            output[new_index] = output[new_index].wrapping_sub(*coef);
+        }
+    }
+}
+
+/// Apply the automorphism $X \mapsto X^{a}$ where `a` is the `automorphism_exponent` argument of
+/// this function, to the `input` [`Polynomial`] in the ring polynomial ring
+/// $P\left[X\right]/X^N+1$.
+///
+/// # Note
+///
+/// This operation only supports polynomial rings where $N$ is a power of two.
+///
+/// Computations wrap around (similar to computing modulo $2^{n\_{bits}}$) when exceeding the
+/// unsigned integer capacity.
+///
+/// ```rust
+/// use tfhe::core_crypto::algorithms::polynomial_algorithms::*;
+/// use tfhe::core_crypto::prelude::*;
+///
+/// let mut output = Polynomial::new(0u64, PolynomialSize(4));
+/// let input = Polynomial::from_container((0u64..4).collect::<Vec<_>>());
+///
+/// apply_automorphism_wrapping_add_assign(&mut output, &input, 3);
+///
+/// let expected = Polynomial::from_container(vec![0, 3, 18446744073709551614, 1]);
+///
+/// assert_eq!(output, expected);
+/// ```
+pub fn apply_automorphism_assign<Scalar, PolyCont>(
+    input: &mut Polynomial<PolyCont>,
+    automorphism_exponent: usize,
+) where
+    Scalar: UnsignedInteger,
+    PolyCont: ContainerMut<Element = Scalar>,
+{
+    let mut temp = Polynomial::new(Scalar::ZERO, input.polynomial_size());
+    apply_automorphism_wrapping_add_assign(&mut temp, input, automorphism_exponent);
+    input.as_mut().copy_from_slice(temp.as_ref());
+}
+
+pub fn polynomial_list_wrapping_sub_scalar_mul_assign<Scalar, InputCont, OutputCont, PolyCont>(
+    output_poly_list: &mut PolynomialList<OutputCont>,
+    input_poly_list: &PolynomialList<InputCont>,
+    scalar_poly: &Polynomial<PolyCont>,
+) where
+    Scalar: UnsignedInteger,
+    OutputCont: ContainerMut<Element = Scalar>,
+    InputCont: Container<Element = Scalar>,
+    PolyCont: Container<Element = Scalar>,
+{
+    assert_eq!(
+        output_poly_list.polynomial_size(),
+        input_poly_list.polynomial_size()
+    );
+    assert_eq!(
+        output_poly_list.polynomial_count(),
+        input_poly_list.polynomial_count()
+    );
+    for (mut output_poly, input_poly) in output_poly_list.iter_mut().zip(input_poly_list.iter()) {
+        polynomial_wrapping_sub_mul_assign(&mut output_poly, &input_poly, scalar_poly)
     }
 }
 

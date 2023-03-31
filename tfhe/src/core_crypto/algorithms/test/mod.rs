@@ -11,6 +11,7 @@ mod ggsw_encryption;
 mod glwe_encryption;
 mod glwe_linear_algebra;
 mod glwe_sample_extraction;
+mod glwe_tensor_product;
 mod lwe_bootstrap_key_generation;
 mod lwe_compact_public_key_generation;
 mod lwe_encryption;

@@ -11,27 +11,27 @@ on:
       boolean_bench:
         description: "Run Boolean benches"
         type: boolean
-        default: true
+        default: false
       shortint_bench:
         description: "Run shortint benches"
         type: boolean
-        default: true
+        default: false
       integer_bench:
         description: "Run integer benches"
         type: boolean
-        default: true
+        default: false
       integer_multi_bit_bench:
         description: "Run integer multi bit benches"
         type: boolean
-        default: true
+        default: false
       pbs_bench:
-        description: "Run PBS benches"
+        description: "Run trivium benches"
         type: boolean
         default: true
       wasm_client_bench:
         description: "Run WASM client benches"
         type: boolean
-        default: true
+        default: false
 
 jobs:
   start-benchmarks:

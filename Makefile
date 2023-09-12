@@ -502,6 +502,11 @@ ci_bench_web_js_api_parallel: build_web_js_api_parallel
 	nvm use node && \
 	$(MAKE) -C tfhe/web_wasm_parallel_tests bench-ci
 
+.PHONY: bench_trivium # Run benchmarks for Trivium
+bench_trivium: install_rs_check_toolchain
+	RUSTFLAGS="$(RUSTFLAGS)" cargo $(CARGO_RS_CHECK_TOOLCHAIN) bench \
+	--features=$(AVX512_FEATURE) -p tfhe-trivium
+
 #
 # Utility tools
 #

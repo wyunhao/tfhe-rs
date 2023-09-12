@@ -16,6 +16,9 @@ features = [ "boolean", "shortint", "integer", "x86_64" ]
 path = "../../tfhe"
 features = [ "boolean", "shortint", "integer", "aarch64-unix" ]
 
+[features]
+nightly-avx512 = ["tfhe/nightly-avx512"]
+
 [dev-dependencies]
 criterion = { version = "0.4", features = [ "html_reports" ]}
 

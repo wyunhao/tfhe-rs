@@ -93,10 +93,18 @@ fn trivium_test_1() {
     }
 
     let hexadecimal = get_hexadecimal_string_from_lsb_first_stream(vec);
+
+    println!("{}", &hexadecimal[..128]);
+    println!("{}", &hexadecimal[128..256]);
+    println!("{}", &hexadecimal[256..256 + 128]);
+    println!("{}", &hexadecimal[256 + 128..512]);
+
     assert_eq!(output_0_63, hexadecimal[0..64 * 2]);
     assert_eq!(output_192_255, hexadecimal[192 * 2..256 * 2]);
     assert_eq!(output_256_319, hexadecimal[256 * 2..320 * 2]);
     assert_eq!(output_448_511, hexadecimal[448 * 2..512 * 2]);
+
+    panic!("lol");
 }
 
 #[test]
@@ -181,11 +189,19 @@ fn trivium_test_4() {
     let mut trivium = TriviumStream::<bool>::new(key, iv);
 
     let mut vec = Vec::<bool>::with_capacity(131072 * 8);
-    while vec.len() < 131072 * 8 {
+    while vec.len() < 1024 * 8 {
         vec.push(trivium.next_bool());
     }
 
     let hexadecimal = get_hexadecimal_string_from_lsb_first_stream(vec);
+
+    println!("{}", &hexadecimal[..128]);
+    println!("{}", &hexadecimal[128..256]);
+    println!("{}", &hexadecimal[256..256 + 128]);
+    println!("{}", &hexadecimal[256 + 128..512]);
+
+    panic!("lol");
+
     assert_eq!(output_0_63, hexadecimal[0..64 * 2]);
     assert_eq!(output_65472_65535, hexadecimal[65472 * 2..65536 * 2]);
     assert_eq!(output_65536_65599, hexadecimal[65536 * 2..65600 * 2]);
@@ -394,19 +410,34 @@ fn trivium_test_shortint_long() {
         }
     }
     let output_0_63    = "F4CD954A717F26A7D6930830C4E7CF0819F80E03F25F342C64ADC66ABA7F8A8E6EAA49F23632AE3CD41A7BD290A0132F81C6D4043B6E397D7388F3A03B5FE358".to_string();
+    let output_64_127 = "86A90D2240F2406FD738F404CF87ED4237721A509AB2A9B41118DB1EEB443E045B72C4A12A7E7E55CBFA675FE55FF9FF7843D34C7816F4D11A0CD3A03BB24F3E".to_string();
+    let output_128_191 = "0830C6E25F43DAEB00173E63BDD9AB7CECDD9E1E209BB03BD5C0157030B6E9750CEED2CB5A9F0AFE7174642260C5BB379A1A082412422C743B95BC4FDDFA51B4".to_string();
+    let output_192_255 = "0E552C0DDEECBA7EB1729D87440612E758347FF72B4449776E3F82C10EE463AED066F0FCBF895F85354646E59692BC1B92ACB30984F25B366FF27AED8333053F".to_string();
 
     let cipher_key = key.map(|x| client_key.encrypt(x));
 
-    let mut ciphered_message = vec![FheUint64::try_encrypt(0u64, &hl_client_key).unwrap(); 9];
+    let mut ciphered_message = vec![FheUint64::try_encrypt(0u64, &hl_client_key).unwrap(); 33];
 
     let mut trivium = TriviumStreamShortint::new(cipher_key, iv, server_key, ksk, hl_server_key);
 
-    let mut vec = Vec::<u64>::with_capacity(8);
-    while vec.len() < 8 {
+    let mut vec = Vec::<u64>::with_capacity(32);
+    while vec.len() < 32 {
         let trans_ciphered_message = trivium.trans_encrypt_64(ciphered_message.pop().unwrap());
         vec.push(trans_ciphered_message.decrypt(&hl_client_key));
     }
 
     let hexadecimal = get_hexagonal_string_from_u64(vec);
+    println!("{}", &hexadecimal[..128]);
+    println!("{}", &hexadecimal[128..256]);
+    println!("{}", &hexadecimal[256..256 + 128]);
+    println!("{}", &hexadecimal[256 + 128..512]);
+
     assert_eq!(output_0_63, hexadecimal[0..64 * 2]);
+    assert_eq!(output_64_127, hexadecimal[64 * 2..128 * 2]);
+    assert_eq!(output_128_191, hexadecimal[128 * 2..192 * 2]);
+    assert_eq!(output_192_255, hexadecimal[192 * 2..256 * 2]);
+    // assert_eq!(output_256_319, hexadecimal[256 * 2..320 * 2]);
+    // assert_eq!(output_448_511, hexadecimal[448 * 2..512 * 2]);
+
+    panic!("lol")
 }

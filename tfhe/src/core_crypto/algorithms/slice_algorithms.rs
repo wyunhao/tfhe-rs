@@ -251,9 +251,73 @@ pub fn slice_wrapping_sub_scalar_mul_assign<Scalar>(
         lhs.len(),
         rhs.len()
     );
-    lhs.iter_mut()
-        .zip(rhs.iter())
-        .for_each(|(lhs, &rhs)| *lhs = (*lhs).wrapping_sub(rhs.wrapping_mul(scalar)));
+
+    struct Impl<'a, Scalar> {
+        lhs: &'a mut [Scalar],
+        rhs: &'a [Scalar],
+        scalar: Scalar,
+    }
+
+    impl<Scalar: UnsignedInteger> pulp::NullaryFnOnce for Impl<'_, Scalar> {
+        type Output = ();
+
+        #[inline(always)]
+        fn call(self) -> Self::Output {
+            let Self { lhs, rhs, scalar } = self;
+
+            macro_rules! spec_constant {
+                ($constant: expr) => {
+                    if scalar == Scalar::cast_from($constant) {
+                        for (lhs, &rhs) in lhs.iter_mut().zip(rhs.iter()) {
+                            *lhs =
+                                (*lhs).wrapping_sub(rhs.wrapping_mul(Scalar::cast_from($constant)))
+                        }
+                        return;
+                    }
+                };
+            }
+
+            spec_constant!(!0);
+            spec_constant!(!1);
+            spec_constant!(!2);
+            spec_constant!(!3);
+            spec_constant!(!4);
+            spec_constant!(!5);
+            spec_constant!(!6);
+            spec_constant!(!7);
+            spec_constant!(!8);
+            spec_constant!(!9);
+            spec_constant!(!10);
+            spec_constant!(!11);
+            spec_constant!(!12);
+            spec_constant!(!13);
+            spec_constant!(!14);
+            spec_constant!(!15);
+
+            spec_constant!(0);
+            spec_constant!(1);
+            spec_constant!(2);
+            spec_constant!(3);
+            spec_constant!(4);
+            spec_constant!(5);
+            spec_constant!(6);
+            spec_constant!(7);
+            spec_constant!(8);
+            spec_constant!(9);
+            spec_constant!(10);
+            spec_constant!(11);
+            spec_constant!(12);
+            spec_constant!(13);
+            spec_constant!(14);
+            spec_constant!(15);
+
+            for (lhs, &rhs) in lhs.iter_mut().zip(rhs.iter()) {
+                *lhs = (*lhs).wrapping_sub(rhs.wrapping_mul(scalar))
+            }
+        }
+    }
+
+    pulp::Arch::new().dispatch(Impl { lhs, rhs, scalar });
 }
 
 /// Compute the opposite of a slice containing unsigned integers, element-wise and in place.

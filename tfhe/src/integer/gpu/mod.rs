@@ -243,28 +243,28 @@ impl CudaStream {
                 self.device().get_max_shared_memory() as u32,
                 true,
             );
-            cuda_integer_mult_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_out.as_mut_c_ptr(),
-                radix_lwe_left.as_c_ptr(),
-                radix_lwe_right.as_c_ptr(),
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                mem_ptr,
-                message_modulus.0 as u32,
-                carry_modulus.0 as u32,
-                glwe_dimension.0 as u32,
-                lwe_dimension.0 as u32,
-                polynomial_size.0 as u32,
-                pbs_base_log.0 as u32,
-                pbs_level.0 as u32,
-                ks_base_log.0 as u32,
-                ks_level.0 as u32,
-                0,
-                num_blocks,
-                PBSType::ClassicalLowLat as u32,
-                self.device().get_max_shared_memory() as u32,
-            );
+            //cuda_integer_mult_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_out.as_mut_c_ptr(),
+            //    radix_lwe_left.as_c_ptr(),
+            //    radix_lwe_right.as_c_ptr(),
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    mem_ptr,
+            //    message_modulus.0 as u32,
+            //    carry_modulus.0 as u32,
+            //    glwe_dimension.0 as u32,
+            //    lwe_dimension.0 as u32,
+            //    polynomial_size.0 as u32,
+            //    pbs_base_log.0 as u32,
+            //    pbs_level.0 as u32,
+            //    ks_base_log.0 as u32,
+            //    ks_level.0 as u32,
+            //    0,
+            //    num_blocks,
+            //    PBSType::ClassicalLowLat as u32,
+            //    self.device().get_max_shared_memory() as u32,
+            //);
             cleanup_cuda_integer_mult(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -309,28 +309,28 @@ impl CudaStream {
                 self.device().get_max_shared_memory() as u32,
                 true,
             );
-            cuda_integer_mult_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_out.as_mut_c_ptr(),
-                radix_lwe_left.as_c_ptr(),
-                radix_lwe_right.as_c_ptr(),
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                mem_ptr,
-                message_modulus.0 as u32,
-                carry_modulus.0 as u32,
-                glwe_dimension.0 as u32,
-                lwe_dimension.0 as u32,
-                polynomial_size.0 as u32,
-                pbs_base_log.0 as u32,
-                pbs_level.0 as u32,
-                ks_base_log.0 as u32,
-                ks_level.0 as u32,
-                grouping_factor.0 as u32,
-                num_blocks,
-                PBSType::MultiBit as u32,
-                self.device().get_max_shared_memory() as u32,
-            );
+            //cuda_integer_mult_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_out.as_mut_c_ptr(),
+            //    radix_lwe_left.as_c_ptr(),
+            //    radix_lwe_right.as_c_ptr(),
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    mem_ptr,
+            //    message_modulus.0 as u32,
+            //    carry_modulus.0 as u32,
+            //    glwe_dimension.0 as u32,
+            //    lwe_dimension.0 as u32,
+            //    polynomial_size.0 as u32,
+            //    pbs_base_log.0 as u32,
+            //    pbs_level.0 as u32,
+            //    ks_base_log.0 as u32,
+            //    ks_level.0 as u32,
+            //    grouping_factor.0 as u32,
+            //    num_blocks,
+            //    PBSType::MultiBit as u32,
+            //    self.device().get_max_shared_memory() as u32,
+            //);
             cleanup_cuda_integer_mult(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -373,28 +373,28 @@ impl CudaStream {
                 self.device().get_max_shared_memory() as u32,
                 true,
             );
-            cuda_integer_mult_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                radix_lwe_left.as_c_ptr(),
-                radix_lwe_right.as_c_ptr(),
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                mem_ptr,
-                message_modulus.0 as u32,
-                carry_modulus.0 as u32,
-                glwe_dimension.0 as u32,
-                lwe_dimension.0 as u32,
-                polynomial_size.0 as u32,
-                pbs_base_log.0 as u32,
-                pbs_level.0 as u32,
-                ks_base_log.0 as u32,
-                ks_level.0 as u32,
-                0,
-                num_blocks,
-                PBSType::ClassicalLowLat as u32,
-                self.device().get_max_shared_memory() as u32,
-            );
+            //cuda_integer_mult_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    radix_lwe_left.as_c_ptr(),
+            //    radix_lwe_right.as_c_ptr(),
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    mem_ptr,
+            //    message_modulus.0 as u32,
+            //    carry_modulus.0 as u32,
+            //    glwe_dimension.0 as u32,
+            //    lwe_dimension.0 as u32,
+            //    polynomial_size.0 as u32,
+            //    pbs_base_log.0 as u32,
+            //    pbs_level.0 as u32,
+            //    ks_base_log.0 as u32,
+            //    ks_level.0 as u32,
+            //    0,
+            //    num_blocks,
+            //    PBSType::ClassicalLowLat as u32,
+            //    self.device().get_max_shared_memory() as u32,
+            //);
             cleanup_cuda_integer_mult(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -438,28 +438,28 @@ impl CudaStream {
                 self.device().get_max_shared_memory() as u32,
                 true,
             );
-            cuda_integer_mult_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                radix_lwe_left.as_c_ptr(),
-                radix_lwe_right.as_c_ptr(),
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                mem_ptr,
-                message_modulus.0 as u32,
-                carry_modulus.0 as u32,
-                glwe_dimension.0 as u32,
-                lwe_dimension.0 as u32,
-                polynomial_size.0 as u32,
-                pbs_base_log.0 as u32,
-                pbs_level.0 as u32,
-                ks_base_log.0 as u32,
-                ks_level.0 as u32,
-                grouping_factor.0 as u32,
-                num_blocks,
-                PBSType::MultiBit as u32,
-                self.device().get_max_shared_memory() as u32,
-            );
+            //cuda_integer_mult_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    radix_lwe_left.as_c_ptr(),
+            //    radix_lwe_right.as_c_ptr(),
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    mem_ptr,
+            //    message_modulus.0 as u32,
+            //    carry_modulus.0 as u32,
+            //    glwe_dimension.0 as u32,
+            //    lwe_dimension.0 as u32,
+            //    polynomial_size.0 as u32,
+            //    pbs_base_log.0 as u32,
+            //    pbs_level.0 as u32,
+            //    ks_base_log.0 as u32,
+            //    ks_level.0 as u32,
+            //    grouping_factor.0 as u32,
+            //    num_blocks,
+            //    PBSType::MultiBit as u32,
+            //    self.device().get_max_shared_memory() as u32,
+            //);
             cleanup_cuda_integer_mult(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -506,16 +506,16 @@ impl CudaStream {
                 op as u32,
                 true,
             );
-            cuda_bitop_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_out.as_mut_c_ptr(),
-                radix_lwe_left.as_c_ptr(),
-                radix_lwe_right.as_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_bitop_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_out.as_mut_c_ptr(),
+            //    radix_lwe_left.as_c_ptr(),
+            //    radix_lwe_right.as_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_bitop(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -561,16 +561,16 @@ impl CudaStream {
                 op as u32,
                 true,
             );
-            cuda_bitop_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                radix_lwe_left.as_c_ptr(),
-                radix_lwe_right.as_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_bitop_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    radix_lwe_left.as_c_ptr(),
+            //    radix_lwe_right.as_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_bitop(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -614,15 +614,15 @@ impl CudaStream {
                 BitOpType::Not as u32,
                 true,
             );
-            cuda_bitnot_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                radix_lwe_left.as_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_bitnot_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    radix_lwe_left.as_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_bitop(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -667,15 +667,15 @@ impl CudaStream {
                 BitOpType::Not as u32,
                 true,
             );
-            cuda_bitnot_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                radix_lwe_left.as_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_bitnot_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    radix_lwe_left.as_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_bitop(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -722,18 +722,18 @@ impl CudaStream {
                 op as u32,
                 true,
             );
-            cuda_scalar_bitop_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe.as_mut_c_ptr(),
-                radix_lwe.as_mut_c_ptr(),
-                clear_blocks.as_c_ptr(),
-                clear_blocks.len() as u32,
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-                op as u32,
-            );
+            //cuda_scalar_bitop_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe.as_mut_c_ptr(),
+            //    radix_lwe.as_mut_c_ptr(),
+            //    clear_blocks.as_c_ptr(),
+            //    clear_blocks.len() as u32,
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //    op as u32,
+            //);
             cleanup_cuda_integer_bitop(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -779,18 +779,18 @@ impl CudaStream {
                 op as u32,
                 true,
             );
-            cuda_scalar_bitop_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe.as_mut_c_ptr(),
-                radix_lwe.as_mut_c_ptr(),
-                clear_blocks.as_c_ptr(),
-                clear_blocks.len() as u32,
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-                op as u32,
-            );
+            //cuda_scalar_bitop_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe.as_mut_c_ptr(),
+            //    radix_lwe.as_mut_c_ptr(),
+            //    clear_blocks.as_c_ptr(),
+            //    clear_blocks.len() as u32,
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //    op as u32,
+            //);
             cleanup_cuda_integer_bitop(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -837,16 +837,16 @@ impl CudaStream {
                 op as u32,
                 true,
             );
-            cuda_bitop_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                radix_lwe_left.as_c_ptr(),
-                radix_lwe_right.as_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_bitop_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    radix_lwe_left.as_c_ptr(),
+            //    radix_lwe_right.as_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_bitop(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -894,16 +894,16 @@ impl CudaStream {
                 true,
             );
 
-            cuda_comparison_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_out.as_mut_c_ptr(),
-                radix_lwe_left.as_c_ptr(),
-                radix_lwe_right.as_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_comparison_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_out.as_mut_c_ptr(),
+            //    radix_lwe_left.as_c_ptr(),
+            //    radix_lwe_right.as_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
 
             cleanup_cuda_integer_comparison(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
@@ -950,16 +950,16 @@ impl CudaStream {
                 op as u32,
                 true,
             );
-            cuda_comparison_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                radix_lwe_left.as_c_ptr(),
-                radix_lwe_right.as_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_comparison_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    radix_lwe_left.as_c_ptr(),
+            //    radix_lwe_right.as_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_comparison(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -1007,16 +1007,16 @@ impl CudaStream {
                 op as u32,
                 true,
             );
-            cuda_comparison_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_out.as_mut_c_ptr(),
-                radix_lwe_left.as_c_ptr(),
-                radix_lwe_right.as_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_comparison_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_out.as_mut_c_ptr(),
+            //    radix_lwe_left.as_c_ptr(),
+            //    radix_lwe_right.as_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_comparison(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -1065,17 +1065,17 @@ impl CudaStream {
                 true,
             );
 
-            cuda_scalar_comparison_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_out.as_mut_c_ptr(),
-                radix_lwe_in.as_c_ptr(),
-                scalar_blocks.as_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-                num_scalar_blocks,
-            );
+            //cuda_scalar_comparison_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_out.as_mut_c_ptr(),
+            //    radix_lwe_in.as_c_ptr(),
+            //    scalar_blocks.as_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //    num_scalar_blocks,
+            //);
 
             cleanup_cuda_integer_comparison(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
@@ -1125,17 +1125,17 @@ impl CudaStream {
                 op as u32,
                 true,
             );
-            cuda_scalar_comparison_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_out.as_mut_c_ptr(),
-                radix_lwe_in.as_c_ptr(),
-                scalar_blocks.as_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-                num_scalar_blocks,
-            );
+            //cuda_scalar_comparison_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_out.as_mut_c_ptr(),
+            //    radix_lwe_in.as_c_ptr(),
+            //    scalar_blocks.as_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //    num_scalar_blocks,
+            //);
             cleanup_cuda_integer_comparison(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -1173,22 +1173,22 @@ impl CudaStream {
                 PBSType::ClassicalLowLat as u32,
                 true,
             );
-            cuda_full_propagation_64_inplace(
-                self.as_c_ptr(),
-                radix_lwe_input.as_mut_c_ptr(),
-                mem_ptr,
-                keyswitch_key.as_c_ptr(),
-                bootstrapping_key.as_c_ptr(),
-                lwe_dimension.0 as u32,
-                glwe_dimension.0 as u32,
-                polynomial_size.0 as u32,
-                ks_base_log.0 as u32,
-                ks_level.0 as u32,
-                pbs_base_log.0 as u32,
-                pbs_level.0 as u32,
-                0,
-                num_blocks,
-            );
+            //cuda_full_propagation_64_inplace(
+            //    self.as_c_ptr(),
+            //    radix_lwe_input.as_mut_c_ptr(),
+            //    mem_ptr,
+            //    keyswitch_key.as_c_ptr(),
+            //    bootstrapping_key.as_c_ptr(),
+            //    lwe_dimension.0 as u32,
+            //    glwe_dimension.0 as u32,
+            //    polynomial_size.0 as u32,
+            //    ks_base_log.0 as u32,
+            //    ks_level.0 as u32,
+            //    pbs_base_log.0 as u32,
+            //    pbs_level.0 as u32,
+            //    0,
+            //    num_blocks,
+            //);
             cleanup_cuda_full_propagation(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -1227,22 +1227,22 @@ impl CudaStream {
                 PBSType::MultiBit as u32,
                 true,
             );
-            cuda_full_propagation_64_inplace(
-                self.as_c_ptr(),
-                radix_lwe_input.as_mut_c_ptr(),
-                mem_ptr,
-                keyswitch_key.as_c_ptr(),
-                bootstrapping_key.as_c_ptr(),
-                lwe_dimension.0 as u32,
-                glwe_dimension.0 as u32,
-                polynomial_size.0 as u32,
-                ks_base_log.0 as u32,
-                ks_level.0 as u32,
-                pbs_base_log.0 as u32,
-                pbs_level.0 as u32,
-                pbs_grouping_factor.0 as u32,
-                num_blocks,
-            );
+            //cuda_full_propagation_64_inplace(
+            //    self.as_c_ptr(),
+            //    radix_lwe_input.as_mut_c_ptr(),
+            //    mem_ptr,
+            //    keyswitch_key.as_c_ptr(),
+            //    bootstrapping_key.as_c_ptr(),
+            //    lwe_dimension.0 as u32,
+            //    glwe_dimension.0 as u32,
+            //    polynomial_size.0 as u32,
+            //    ks_base_log.0 as u32,
+            //    ks_level.0 as u32,
+            //    pbs_base_log.0 as u32,
+            //    pbs_level.0 as u32,
+            //    pbs_grouping_factor.0 as u32,
+            //    num_blocks,
+            //);
             cleanup_cuda_full_propagation(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -1285,14 +1285,14 @@ impl CudaStream {
                 PBSType::ClassicalLowLat as u32,
                 true,
             );
-            cuda_propagate_single_carry_low_latency_kb_64_inplace(
-                self.as_c_ptr(),
-                radix_lwe_input.as_mut_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_propagate_single_carry_low_latency_kb_64_inplace(
+            //    self.as_c_ptr(),
+            //    radix_lwe_input.as_mut_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_propagate_single_carry_low_latency(
                 self.as_c_ptr(),
                 std::ptr::addr_of_mut!(mem_ptr),
@@ -1339,14 +1339,14 @@ impl CudaStream {
                 PBSType::MultiBit as u32,
                 true,
             );
-            cuda_propagate_single_carry_low_latency_kb_64_inplace(
-                self.as_c_ptr(),
-                radix_lwe_input.as_mut_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_propagate_single_carry_low_latency_kb_64_inplace(
+            //    self.as_c_ptr(),
+            //    radix_lwe_input.as_mut_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_propagate_single_carry_low_latency(
                 self.as_c_ptr(),
                 std::ptr::addr_of_mut!(mem_ptr),
@@ -1394,15 +1394,15 @@ impl CudaStream {
                 ShiftType::Left as u32,
                 true,
             );
-            cuda_integer_radix_scalar_shift_kb_64_inplace(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                shift,
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_integer_radix_scalar_shift_kb_64_inplace(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    shift,
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_radix_scalar_shift(
                 self.as_c_ptr(),
                 std::ptr::addr_of_mut!(mem_ptr),
@@ -1453,15 +1453,15 @@ impl CudaStream {
                 ShiftType::Left as u32,
                 true,
             );
-            cuda_integer_radix_scalar_shift_kb_64_inplace(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                shift,
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_integer_radix_scalar_shift_kb_64_inplace(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    shift,
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_radix_scalar_shift(
                 self.as_c_ptr(),
                 std::ptr::addr_of_mut!(mem_ptr),
@@ -1511,15 +1511,15 @@ impl CudaStream {
                 ShiftType::Right as u32,
                 true,
             );
-            cuda_integer_radix_scalar_shift_kb_64_inplace(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                shift,
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_integer_radix_scalar_shift_kb_64_inplace(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    shift,
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_radix_scalar_shift(
                 self.as_c_ptr(),
                 std::ptr::addr_of_mut!(mem_ptr),
@@ -1570,15 +1570,15 @@ impl CudaStream {
                 ShiftType::Right as u32,
                 true,
             );
-            cuda_integer_radix_scalar_shift_kb_64_inplace(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                shift,
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_integer_radix_scalar_shift_kb_64_inplace(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    shift,
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_radix_scalar_shift(
                 self.as_c_ptr(),
                 std::ptr::addr_of_mut!(mem_ptr),
@@ -1627,17 +1627,17 @@ impl CudaStream {
                 PBSType::ClassicalLowLat as u32,
                 true,
             );
-            cuda_cmux_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_out.as_mut_c_ptr(),
-                radix_lwe_condition.as_c_ptr(),
-                radix_lwe_true.as_c_ptr(),
-                radix_lwe_false.as_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_cmux_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_out.as_mut_c_ptr(),
+            //    radix_lwe_condition.as_c_ptr(),
+            //    radix_lwe_true.as_c_ptr(),
+            //    radix_lwe_false.as_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_radix_cmux(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -1684,17 +1684,17 @@ impl CudaStream {
                 PBSType::MultiBit as u32,
                 true,
             );
-            cuda_cmux_integer_radix_ciphertext_kb_64(
-                self.as_c_ptr(),
-                radix_lwe_out.as_mut_c_ptr(),
-                radix_lwe_condition.as_c_ptr(),
-                radix_lwe_true.as_c_ptr(),
-                radix_lwe_false.as_c_ptr(),
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_cmux_integer_radix_ciphertext_kb_64(
+            //    self.as_c_ptr(),
+            //    radix_lwe_out.as_mut_c_ptr(),
+            //    radix_lwe_condition.as_c_ptr(),
+            //    radix_lwe_true.as_c_ptr(),
+            //    radix_lwe_false.as_c_ptr(),
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_radix_cmux(self.as_c_ptr(), std::ptr::addr_of_mut!(mem_ptr));
         }
     }
@@ -1741,15 +1741,15 @@ impl CudaStream {
                 ShiftType::Left as u32,
                 true,
             );
-            cuda_integer_radix_scalar_rotate_kb_64_inplace(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                n,
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_integer_radix_scalar_rotate_kb_64_inplace(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    n,
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_radix_scalar_rotate(
                 self.as_c_ptr(),
                 std::ptr::addr_of_mut!(mem_ptr),
@@ -1800,15 +1800,15 @@ impl CudaStream {
                 ShiftType::Left as u32,
                 true,
             );
-            cuda_integer_radix_scalar_rotate_kb_64_inplace(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                n,
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_integer_radix_scalar_rotate_kb_64_inplace(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    n,
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_radix_scalar_rotate(
                 self.as_c_ptr(),
                 std::ptr::addr_of_mut!(mem_ptr),
@@ -1858,15 +1858,15 @@ impl CudaStream {
                 ShiftType::Right as u32,
                 true,
             );
-            cuda_integer_radix_scalar_rotate_kb_64_inplace(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                n,
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_integer_radix_scalar_rotate_kb_64_inplace(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    n,
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_radix_scalar_rotate(
                 self.as_c_ptr(),
                 std::ptr::addr_of_mut!(mem_ptr),
@@ -1917,15 +1917,15 @@ impl CudaStream {
                 ShiftType::Right as u32,
                 true,
             );
-            cuda_integer_radix_scalar_rotate_kb_64_inplace(
-                self.as_c_ptr(),
-                radix_lwe_left.as_mut_c_ptr(),
-                n,
-                mem_ptr,
-                bootstrapping_key.as_c_ptr(),
-                keyswitch_key.as_c_ptr(),
-                num_blocks,
-            );
+            //cuda_integer_radix_scalar_rotate_kb_64_inplace(
+            //    self.as_c_ptr(),
+            //    radix_lwe_left.as_mut_c_ptr(),
+            //    n,
+            //    mem_ptr,
+            //    bootstrapping_key.as_c_ptr(),
+            //    keyswitch_key.as_c_ptr(),
+            //    num_blocks,
+            //);
             cleanup_cuda_integer_radix_scalar_rotate(
                 self.as_c_ptr(),
                 std::ptr::addr_of_mut!(mem_ptr),

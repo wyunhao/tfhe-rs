@@ -547,3 +547,109 @@ fn pbs_throughput<Scalar: UnsignedTorus + CastInto<usize> + Sync + Send + Serial
         }
     }
 }
+
+#[cfg(feature = "gpu")]
+use tfhe::core_crypto::gpu::{cuda_multi_bit_programmable_bootstrap_lwe_ciphertext, CudaDevice, CudaStream};
+#[cfg(feature = "gpu")]
+use tfhe::core_crypto::gpu::glwe_ciphertext_list::CudaGlweCiphertextList;
+#[cfg(feature = "gpu")]
+use tfhe::core_crypto::gpu::lwe_ciphertext_list::CudaLweCiphertextList;
+#[cfg(feature = "gpu")]
+use tfhe::core_crypto::gpu::lwe_multi_bit_bootstrap_key::CudaLweMultiBitBootstrapKey;
+
+#[cfg(feature = "gpu")]
+fn multi_bit_pbs_gpu<
+    Scalar: UnsignedTorus + CastInto<usize> + CastFrom<usize> + Default + Sync + Serialize,
+>(
+    c: &mut Criterion,
+) {
+    let bench_name = "multi_bit_PBS_gpu";
+    let mut bench_group = c.benchmark_group(bench_name);
+
+    // Create the PRNG
+    let mut seeder = new_seeder();
+    let seeder = seeder.as_mut();
+    let mut encryption_generator =
+        EncryptionRandomGenerator::<ActivatedRandomGenerator>::new(seeder.seed(), seeder);
+    let mut secret_generator =
+        SecretRandomGenerator::<ActivatedRandomGenerator>::new(seeder.seed());
+
+    for (name, params, grouping_factor) in multi_bit_benchmark_parameters::<Scalar>().iter() {
+        let gpu_index = 0;
+        let device = CudaDevice::new(gpu_index);
+        let stream = CudaStream::new_unchecked(device);
+
+        // Create the LweSecretKey
+        let input_lwe_secret_key = allocate_and_generate_new_binary_lwe_secret_key(
+            params.lwe_dimension.unwrap(),
+            &mut secret_generator,
+        );
+        let output_glwe_secret_key: GlweSecretKeyOwned<Scalar> =
+            allocate_and_generate_new_binary_glwe_secret_key(
+                params.glwe_dimension.unwrap(),
+                params.polynomial_size.unwrap(),
+                &mut secret_generator,
+            );
+        let output_lwe_secret_key = output_glwe_secret_key.into_lwe_secret_key();
+
+        let multi_bit_bsk = LweMultiBitBootstrapKey::new(0u64, params.glwe_dimension.unwrap().to_glwe_size(), params.polynomial_size.unwrap(), params.pbs_base_log.unwrap(), params.pbs_level.unwrap(), params.lwe_dimension.unwrap(), *grouping_factor, Default::default());
+        let multi_bit_bsk_gpu = CudaLweMultiBitBootstrapKey::from_lwe_multi_bit_bootstrap_key
+            (&multi_bit_bsk, &stream);
+
+        // Allocate a new LweCiphertext and encrypt our plaintext
+        let lwe_ciphertext_in = allocate_and_encrypt_new_lwe_ciphertext(
+            &input_lwe_secret_key,
+            Plaintext(Scalar::ZERO),
+            params.lwe_modular_std_dev.unwrap(),
+            tfhe::core_crypto::prelude::CiphertextModulus::new_native(),
+            &mut encryption_generator,
+        );
+        let lwe_ciphertext_in_gpu= CudaLweCiphertextList::from_lwe_ciphertext(&lwe_ciphertext_in,
+                                                                              &stream);
+
+        let accumulator = GlweCiphertext::new(
+            Scalar::ZERO,
+            params.glwe_dimension.unwrap().to_glwe_size(),
+            params.polynomial_size.unwrap(),
+            tfhe::core_crypto::prelude::CiphertextModulus::new_native(),
+        );
+        let accumulator_gpu = CudaGlweCiphertextList::from_glwe_ciphertext(&accumulator, &stream);
+
+        // Allocate the LweCiphertext to store the result of the PBS
+        let mut out_pbs_ct = LweCiphertext::new(
+            Scalar::ZERO,
+            output_lwe_secret_key.lwe_dimension().to_lwe_size(),
+            tfhe::core_crypto::prelude::CiphertextModulus::new_native(),
+        );
+        let mut out_pbs_ct_gpu = CudaLweCiphertextList::from_lwe_ciphertext(&out_pbs_ct,
+                                                                            &stream);
+
+        let id = format!("{bench_name}_{name}_parallelized");
+        bench_group.bench_function(&id, |b| {
+            b.iter(|| {
+                cuda_multi_bit_programmable_bootstrap_lwe_ciphertext(
+                    &lwe_ciphertext_in_gpu,
+                    &mut out_pbs_ct_gpu,
+                    &accumulator_gpu.as_view(),
+                    lut_indexes,
+                    output_indexes,
+                    input_indexes,
+                    &multi_bit_bsk_gpu,
+                    &stream,
+                );
+                black_box(&mut out_pbs_ct_gpu);
+            })
+        });
+
+        let bit_size = params.message_modulus.unwrap().ilog2();
+        write_to_json(
+            &id,
+            *params,
+            name,
+            "pbs",
+            &OperatorType::Atomic,
+            bit_size,
+            vec![bit_size],
+        );
+    }
+}

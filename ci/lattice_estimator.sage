@@ -53,8 +53,9 @@ def check_security(filename):
 
             usvp_level = LWE.primal_usvp(param, red_cost_model = model)
             dual_level = LWE.dual_hybrid(param, red_cost_model = model)
+            bdd_level = LWE.primal_hybrid(param, red_cost_model = model)
 
-            estimator_level = log(min(usvp_level["rop"], dual_level["rop"]),2 )
+            estimator_level = log(min(usvp_level["rop"], dual_level["rop"], bdd_level["rop"]),2 )
             security_level = f"security level = {estimator_level} bits"
             if estimator_level < 127:
                 print("FAIL\t({security_level})")

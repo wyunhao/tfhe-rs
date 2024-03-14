@@ -103,7 +103,14 @@ __host__ void cuda_keyswitch_lwe_ciphertext_vector(
     uint32_t lwe_dimension_in, uint32_t lwe_dimension_out, uint32_t base_log,
     uint32_t level_count, uint32_t num_samples) {
 
+    float time;
+    cudaEvent_t start, stop;
+
+  check_cuda_error(cudaEventCreate(&start));
+  check_cuda_error(cudaEventCreate(&stop));
+  check_cuda_error(cudaEventRecord(start, 0));
   cudaSetDevice(stream->gpu_index);
+  cudaDeviceSynchronize();
   constexpr int ideal_threads = 128;
 
   int lwe_size = lwe_dimension_out + 1;
@@ -135,6 +142,11 @@ __host__ void cuda_keyswitch_lwe_ciphertext_vector(
       lwe_dimension_in, lwe_dimension_out, base_log, level_count, lwe_lower,
       lwe_upper, cutoff);
   check_cuda_error(cudaGetLastError());
+  cudaDeviceSynchronize();
+  check_cuda_error(cudaEventRecord(stop, 0));
+  check_cuda_error(cudaEventSynchronize(stop));
+  check_cuda_error(cudaEventElapsedTime(&time, start, stop));
+  printf("%f\n", time);
 }
 
 #endif

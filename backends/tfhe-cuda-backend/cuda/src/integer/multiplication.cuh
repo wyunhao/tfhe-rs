@@ -377,6 +377,13 @@ __host__ void host_integer_mult_radix_kb(
     uint64_t *radix_lwe_right, void *bsk, uint64_t *ksk,
     int_mul_memory<Torus> *mem_ptr, uint32_t num_blocks) {
 
+    float time;
+    cudaEvent_t start, stop;
+
+    check_cuda_error(cudaEventCreate(&start));
+    check_cuda_error(cudaEventCreate(&stop));
+    check_cuda_error(cudaEventRecord(start, 0));
+    cudaDeviceSynchronize();
   cudaSetDevice(stream->gpu_index);
   auto glwe_dimension = mem_ptr->params.glwe_dimension;
   auto polynomial_size = mem_ptr->params.polynomial_size;
@@ -479,6 +486,12 @@ __host__ void host_integer_mult_radix_kb(
   host_integer_sum_ciphertexts_vec_kb<Torus, params>(
       stream, radix_lwe_out, vector_result_sb, terms_degree, bsk, ksk,
       mem_ptr->sum_ciphertexts_mem, num_blocks, 2 * num_blocks);
+
+    cudaDeviceSynchronize();
+    check_cuda_error(cudaEventRecord(stop, 0));
+    check_cuda_error(cudaEventSynchronize(stop));
+    check_cuda_error(cudaEventElapsedTime(&time, start, stop));
+    printf("mul time: %f\n", time);
 }
 
 template <typename Torus>

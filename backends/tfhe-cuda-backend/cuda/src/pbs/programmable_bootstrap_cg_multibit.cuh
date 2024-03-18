@@ -176,6 +176,13 @@ __host__ void scratch_cg_multi_bit_programmable_bootstrap(
     bool allocate_gpu_memory, uint32_t lwe_chunk_size = 0) {
 
   cudaSetDevice(stream->gpu_index);
+  float total_time;
+  cudaEvent_t total_start, total_stop;
+
+  check_cuda_error(cudaEventCreate(&total_start));
+  check_cuda_error(cudaEventCreate(&total_stop));
+  check_cuda_error(cudaEventRecord(total_start, 0));
+
 
   uint64_t full_sm_keybundle =
       get_buffer_size_full_sm_multibit_programmable_bootstrap_keybundle<Torus>(
@@ -187,6 +194,12 @@ __host__ void scratch_cg_multi_bit_programmable_bootstrap(
       get_buffer_size_partial_sm_cg_multibit_programmable_bootstrap<Torus>(
           polynomial_size);
 
+  float time;
+  cudaEvent_t start, stop;
+
+  check_cuda_error(cudaEventCreate(&start));
+  check_cuda_error(cudaEventCreate(&stop));
+  check_cuda_error(cudaEventRecord(start, 0));
   if (max_shared_memory < full_sm_keybundle) {
     check_cuda_error(cudaFuncSetAttribute(
         device_multi_bit_programmable_bootstrap_keybundle<Torus, params, NOSM>,
@@ -246,6 +259,11 @@ __host__ void scratch_cg_multi_bit_programmable_bootstrap(
       stream, glwe_dimension, polynomial_size, level_count,
       input_lwe_ciphertext_count, lwe_chunk_size, PBS_VARIANT::CG,
       allocate_gpu_memory);
+  cudaDeviceSynchronize();
+  check_cuda_error(cudaEventRecord(total_stop, 0));
+  check_cuda_error(cudaEventSynchronize(total_stop));
+  check_cuda_error(cudaEventElapsedTime(&total_time, total_start, total_stop));
+  printf("Total time: %f\n", total_time);
 }
 
 template <typename Torus, class params>

@@ -130,8 +130,20 @@ template <typename Torus> struct pbs_buffer<Torus, PBS_TYPE::MULTI_BIT> {
              uint32_t polynomial_size, uint32_t level_count,
              uint32_t input_lwe_ciphertext_count, uint32_t lwe_chunk_size,
              PBS_VARIANT pbs_variant, bool allocate_gpu_memory) {
+  float time;
+  cudaEvent_t start, stop;
+
+  check_cuda_error(cudaEventCreate(&start));
+  check_cuda_error(cudaEventCreate(&stop));
+  check_cuda_error(cudaEventRecord(start, 0));
     this->pbs_variant = pbs_variant;
     auto max_shared_memory = cuda_get_max_shared_memory(stream->gpu_index);
+  cudaDeviceSynchronize();
+  check_cuda_error(cudaEventRecord(stop, 0));
+  check_cuda_error(cudaEventSynchronize(stop));
+  check_cuda_error(cudaEventElapsedTime(&time, start, stop));
+  printf("Get max shared mem: %f\n", time);
+  check_cuda_error(cudaEventRecord(start, 0));
 
     uint64_t full_sm_keybundle =
         get_buffer_size_full_sm_multibit_programmable_bootstrap_keybundle<
@@ -162,6 +174,12 @@ template <typename Torus> struct pbs_buffer<Torus, PBS_TYPE::MULTI_BIT> {
     auto num_blocks_acc_cg =
         level_count * (glwe_dimension + 1) * input_lwe_ciphertext_count;
 
+  cudaDeviceSynchronize();
+  check_cuda_error(cudaEventRecord(stop, 0));
+  check_cuda_error(cudaEventSynchronize(stop));
+  check_cuda_error(cudaEventElapsedTime(&time, start, stop));
+  printf("Before alloc: %f\n", time);
+  check_cuda_error(cudaEventRecord(start, 0));
     if (allocate_gpu_memory) {
       // Keybundle
       if (max_shared_memory < full_sm_keybundle)
@@ -195,15 +213,39 @@ template <typename Torus> struct pbs_buffer<Torus, PBS_TYPE::MULTI_BIT> {
       default:
         PANIC("Cuda error (PBS): unsupported implementation variant.")
       }
+  cudaDeviceSynchronize();
+  check_cuda_error(cudaEventRecord(stop, 0));
+  check_cuda_error(cudaEventSynchronize(stop));
+  check_cuda_error(cudaEventElapsedTime(&time, start, stop));
+  printf("After alloc: %f\n", time);
+  check_cuda_error(cudaEventRecord(start, 0));
 
       keybundle_fft = (double2 *)cuda_malloc_async(
           num_blocks_keybundle * (polynomial_size / 2) * sizeof(double2),
           stream);
+  cudaDeviceSynchronize();
+  check_cuda_error(cudaEventRecord(stop, 0));
+  check_cuda_error(cudaEventSynchronize(stop));
+  check_cuda_error(cudaEventElapsedTime(&time, start, stop));
+  printf("After keybundle alloc: %f\n", time);
+  check_cuda_error(cudaEventRecord(start, 0));
       global_accumulator = (Torus *)cuda_malloc_async(
           num_blocks_acc_step_two * polynomial_size * sizeof(Torus), stream);
+  cudaDeviceSynchronize();
+  check_cuda_error(cudaEventRecord(stop, 0));
+  check_cuda_error(cudaEventSynchronize(stop));
+  check_cuda_error(cudaEventElapsedTime(&time, start, stop));
+  printf("After global accumulator alloc: %f\n", time);
+  check_cuda_error(cudaEventRecord(start, 0));
       global_accumulator_fft = (double2 *)cuda_malloc_async(
           num_blocks_acc_step_one * (polynomial_size / 2) * sizeof(double2),
           stream);
+  cudaDeviceSynchronize();
+  check_cuda_error(cudaEventRecord(stop, 0));
+  check_cuda_error(cudaEventSynchronize(stop));
+  check_cuda_error(cudaEventElapsedTime(&time, start, stop));
+  printf("After global accumulator FFT alloc: %f\n", time);
+  check_cuda_error(cudaEventRecord(start, 0));
     }
   }
 

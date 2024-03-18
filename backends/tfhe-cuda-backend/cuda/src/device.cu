@@ -217,13 +217,8 @@ void cuda_drop_async(void *ptr, cuda_stream_t *stream) {
 int cuda_get_max_shared_memory(uint32_t gpu_index) {
   check_cuda_error(cudaSetDevice(gpu_index));
   cudaDeviceProp prop;
-  check_cuda_error(cudaGetDeviceProperties(&prop, gpu_index));
-  int max_shared_memory = 0;
-  if (prop.major >= 6) {
-    max_shared_memory = prop.sharedMemPerMultiprocessor;
-  } else {
-    max_shared_memory = prop.sharedMemPerBlock;
-  }
+  int max_shared_memory = cudaDeviceGetAttribute(reinterpret_cast<int *>(&prop), cudaDevAttrMaxSharedMemoryPerBlock, gpu_index);
+  check_cuda_error(cudaGetLastError());
   return max_shared_memory;
 }
 

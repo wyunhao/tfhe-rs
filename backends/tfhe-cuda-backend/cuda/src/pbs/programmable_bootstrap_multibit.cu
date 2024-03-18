@@ -474,7 +474,7 @@ __host__ uint32_t get_average_lwe_chunk_size(uint32_t lwe_dimension,
     return (ct_count > 10000) ? 30 : 45;
   } else if (std::strstr(deviceProp.name, h100Name) != nullptr) {
     // Tesla H100
-    return 64;
+    return (ct_count > 10000) ? 32 : 64;
   }
 
   // Generic case

@@ -335,6 +335,12 @@ __host__ void host_cg_multi_bit_programmable_bootstrap(
     uint32_t num_luts, uint32_t lwe_idx, uint32_t max_shared_memory,
     uint32_t lwe_chunk_size = 0) {
   cudaSetDevice(stream->gpu_index);
+  float total_time;
+  cudaEvent_t total_start, total_stop;
+
+  check_cuda_error(cudaEventCreate(&total_start));
+  check_cuda_error(cudaEventCreate(&total_stop));
+  check_cuda_error(cudaEventRecord(total_start, 0));
 
   if (!lwe_chunk_size)
     lwe_chunk_size = get_average_lwe_chunk_size(lwe_dimension, level_count,
@@ -343,6 +349,12 @@ __host__ void host_cg_multi_bit_programmable_bootstrap(
   for (uint32_t lwe_offset = 0; lwe_offset < (lwe_dimension / grouping_factor);
        lwe_offset += lwe_chunk_size) {
 
+  float time;
+  cudaEvent_t start, stop;
+
+  check_cuda_error(cudaEventCreate(&start));
+  check_cuda_error(cudaEventCreate(&stop));
+  check_cuda_error(cudaEventRecord(start, 0));
     // Compute a keybundle
     execute_compute_keybundle<Torus, params>(
         stream, lwe_array_in, lwe_input_indexes, bootstrapping_key, buffer,
@@ -350,13 +362,33 @@ __host__ void host_cg_multi_bit_programmable_bootstrap(
         grouping_factor, base_log, level_count, max_shared_memory,
         lwe_chunk_size, lwe_offset);
 
+  cudaDeviceSynchronize();
+  check_cuda_error(cudaEventRecord(stop, 0));
+  check_cuda_error(cudaEventSynchronize(stop));
+  check_cuda_error(cudaEventElapsedTime(&time, start, stop));
+  printf("Key bundle: %f\n", time);
+  cudaDeviceSynchronize();
+  check_cuda_error(cudaEventCreate(&start));
+  check_cuda_error(cudaEventCreate(&stop));
+  check_cuda_error(cudaEventRecord(start, 0));
+
     // Accumulate
     execute_external_product_loop<Torus, params>(
         stream, lut_vector, lut_vector_indexes, lwe_array_in, lwe_input_indexes,
         lwe_array_out, lwe_output_indexes, buffer, num_samples, lwe_dimension,
         glwe_dimension, polynomial_size, grouping_factor, base_log, level_count,
         lwe_chunk_size, max_shared_memory, lwe_offset);
+  cudaDeviceSynchronize();
+  check_cuda_error(cudaEventRecord(stop, 0));
+  check_cuda_error(cudaEventSynchronize(stop));
+  check_cuda_error(cudaEventElapsedTime(&time, start, stop));
+  printf("Ext product: %f\n", time);
   }
+  cudaDeviceSynchronize();
+  check_cuda_error(cudaEventRecord(total_stop, 0));
+  check_cuda_error(cudaEventSynchronize(total_stop));
+  check_cuda_error(cudaEventElapsedTime(&total_time, total_start, total_stop));
+  printf("Total time: %f\n", total_time);
 }
 
 // Verify if the grid size satisfies the cooperative group constraints

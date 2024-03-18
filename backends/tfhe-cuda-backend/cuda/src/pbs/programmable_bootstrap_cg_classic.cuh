@@ -293,13 +293,6 @@ __host__ void host_programmable_bootstrap_cg(
     uint32_t level_count, uint32_t input_lwe_ciphertext_count,
     uint32_t num_luts, uint32_t max_shared_memory) {
   cudaSetDevice(stream->gpu_index);
-  float total_time;
-  cudaEvent_t total_start, total_stop;
-
-  check_cuda_error(cudaEventCreate(&total_start));
-  check_cuda_error(cudaEventCreate(&total_stop));
-  check_cuda_error(cudaEventRecord(total_start, 0));
-
 
   // With SM each block corresponds to either the mask or body, no need to
   // duplicate data for each
@@ -352,11 +345,6 @@ __host__ void host_programmable_bootstrap_cg(
         (void *)device_programmable_bootstrap_cg<Torus, params, FULLSM>, grid,
         thds, (void **)kernel_args, full_sm, stream->stream));
   }
-  cudaDeviceSynchronize();
-  check_cuda_error(cudaEventRecord(total_stop, 0));
-  check_cuda_error(cudaEventSynchronize(total_stop));
-  check_cuda_error(cudaEventElapsedTime(&total_time, total_start, total_stop));
-  printf("Total time: %f\n", total_time);
 
   check_cuda_error(cudaGetLastError());
 }

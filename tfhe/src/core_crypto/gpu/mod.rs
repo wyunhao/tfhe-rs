@@ -83,6 +83,9 @@ impl CudaStream {
         num_samples: u32,
         lwe_idx: LweCiphertextIndex,
     ) {
+        use std::time::Instant;
+        let mut now = Instant::now();
+
         let mut pbs_buffer: *mut i8 = std::ptr::null_mut();
         scratch_cuda_programmable_bootstrap_64(
             self.as_c_ptr(),
@@ -94,6 +97,10 @@ impl CudaStream {
             self.device().get_max_shared_memory() as u32,
             true,
         );
+        self.synchronize();
+        let elapsed = now.elapsed();
+        println!("Scratch elapsed: {:?}", elapsed);
+        now = Instant::now();
         cuda_programmable_bootstrap_lwe_ciphertext_vector_64(
             self.as_c_ptr(),
             lwe_array_out.as_mut_c_ptr(),
@@ -114,6 +121,9 @@ impl CudaStream {
             lwe_idx.0 as u32,
             self.device().get_max_shared_memory() as u32,
         );
+        self.synchronize();
+        let elapsed = now.elapsed();
+        println!("PBS elapsed: {:?}", elapsed);
         cleanup_cuda_programmable_bootstrap(self.as_c_ptr(), std::ptr::addr_of_mut!(pbs_buffer));
     }
 
@@ -142,7 +152,7 @@ impl CudaStream {
         num_samples: u32,
         lwe_idx: LweCiphertextIndex,
     ) {
-                use std::time::Instant;
+        use std::time::Instant;
         let mut now = Instant::now();
 
         let mut pbs_buffer: *mut i8 = std::ptr::null_mut();
@@ -159,8 +169,9 @@ impl CudaStream {
             true,
             0u32,
         );
+        self.synchronize();
         let elapsed = now.elapsed();
-        println!("Scratch elapsed: {:.2?}", elapsed);
+        println!("Scratch elapsed: {:?}", elapsed);
         now = Instant::now();
         cuda_multi_bit_programmable_bootstrap_lwe_ciphertext_vector_64(
             self.as_c_ptr(),
@@ -184,8 +195,9 @@ impl CudaStream {
             self.device().get_max_shared_memory() as u32,
             0u32,
         );
+        self.synchronize();
         let elapsed = now.elapsed();
-        println!("MB-PBS elapsed: {:.2?}", elapsed);
+        println!("MB-PBS elapsed: {:?}", elapsed);
         cleanup_cuda_multi_bit_programmable_bootstrap(
             self.as_c_ptr(),
             std::ptr::addr_of_mut!(pbs_buffer),

@@ -3,7 +3,7 @@ use crate::core_crypto::gpu::CudaStream;
 use crate::core_crypto::prelude::{CiphertextModulus, LweCiphertextCount};
 use crate::integer::gpu::ciphertext::boolean_value::CudaBooleanBlock;
 use crate::integer::gpu::ciphertext::info::CudaRadixCiphertextInfo;
-use crate::integer::gpu::ciphertext::{CudaIntegerRadixCiphertext, CudaUnsignedRadixCiphertext};
+use crate::integer::gpu::ciphertext::CudaIntegerRadixCiphertext;
 use crate::integer::gpu::server_key::CudaBootstrappingKey;
 use crate::integer::gpu::{ComparisonType, CudaServerKey};
 use crate::shortint::ciphertext::Degree;
@@ -446,12 +446,15 @@ impl CudaServerKey {
     ///
     /// - `stream` __must__ be synchronized to guarantee computation has finished, and inputs must
     ///   not be dropped until stream is synchronised
-    pub unsafe fn unchecked_gt_async(
+    pub unsafe fn unchecked_gt_async<T>(
         &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
+        ct_left: &T,
+        ct_right: &T,
         stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    ) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         self.unchecked_comparison_async(ct_left, ct_right, ComparisonType::GT, stream)
     }
 
@@ -494,12 +497,15 @@ impl CudaServerKey {
     /// let dec_result = cks.decrypt_bool(&ct_res);
     /// assert_eq!(dec_result, msg1 > msg2);
     /// ```
-    pub fn unchecked_gt(
+    pub fn unchecked_gt<T>(
         &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
+        ct_left: &T,
+        ct_right: &T,
         stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    ) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let result = unsafe { self.unchecked_gt_async(ct_left, ct_right, stream) };
         stream.synchronize();
         result
@@ -509,12 +515,15 @@ impl CudaServerKey {
     ///
     /// - `stream` __must__ be synchronized to guarantee computation has finished, and inputs must
     ///   not be dropped until stream is synchronised
-    pub unsafe fn unchecked_ge_async(
+    pub unsafe fn unchecked_ge_async<T>(
         &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
+        ct_left: &T,
+        ct_right: &T,
         stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    ) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         self.unchecked_comparison_async(ct_left, ct_right, ComparisonType::GE, stream)
     }
 
@@ -522,12 +531,15 @@ impl CudaServerKey {
     ///
     /// - `stream` __must__ be synchronized to guarantee computation has finished, and inputs must
     ///   not be dropped until stream is synchronised
-    pub unsafe fn gt_async(
+    pub unsafe fn gt_async<T>(
         &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
+        ct_left: &T,
+        ct_right: &T,
         stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    ) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let mut tmp_lhs;
         let mut tmp_rhs;
 
@@ -559,12 +571,10 @@ impl CudaServerKey {
         self.unchecked_gt_async(lhs, rhs, stream)
     }
 
-    pub fn gt(
-        &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
-        stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    pub fn gt<T>(&self, ct_left: &T, ct_right: &T, stream: &CudaStream) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let result = unsafe { self.gt_async(ct_left, ct_right, stream) };
         stream.synchronize();
         result
@@ -611,12 +621,15 @@ impl CudaServerKey {
     /// let dec_result = cks.decrypt_bool(&ct_res);
     /// assert_eq!(dec_result, msg1 >= msg2);
     /// ```
-    pub fn unchecked_ge(
+    pub fn unchecked_ge<T>(
         &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
+        ct_left: &T,
+        ct_right: &T,
         stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    ) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let result = unsafe { self.unchecked_ge_async(ct_left, ct_right, stream) };
         stream.synchronize();
         result
@@ -626,12 +639,15 @@ impl CudaServerKey {
     ///
     /// - `stream` __must__ be synchronized to guarantee computation has finished, and inputs must
     ///   not be dropped until stream is synchronised
-    pub unsafe fn ge_async(
+    pub unsafe fn ge_async<T>(
         &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
+        ct_left: &T,
+        ct_right: &T,
         stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    ) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let mut tmp_lhs;
         let mut tmp_rhs;
 
@@ -663,12 +679,10 @@ impl CudaServerKey {
         self.unchecked_ge_async(lhs, rhs, stream)
     }
 
-    pub fn ge(
-        &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
-        stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    pub fn ge<T>(&self, ct_left: &T, ct_right: &T, stream: &CudaStream) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let result = unsafe { self.ge_async(ct_left, ct_right, stream) };
         stream.synchronize();
         result
@@ -678,12 +692,15 @@ impl CudaServerKey {
     ///
     /// - `stream` __must__ be synchronized to guarantee computation has finished, and inputs must
     ///   not be dropped until stream is synchronised
-    pub unsafe fn unchecked_lt_async(
+    pub unsafe fn unchecked_lt_async<T>(
         &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
+        ct_left: &T,
+        ct_right: &T,
         stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    ) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         self.unchecked_comparison_async(ct_left, ct_right, ComparisonType::LT, stream)
     }
 
@@ -728,12 +745,15 @@ impl CudaServerKey {
     /// let dec_result = cks.decrypt_bool(&ct_res);
     /// assert_eq!(dec_result, msg1 < msg2);
     /// ```
-    pub fn unchecked_lt(
+    pub fn unchecked_lt<T>(
         &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
+        ct_left: &T,
+        ct_right: &T,
         stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    ) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let result = unsafe { self.unchecked_lt_async(ct_left, ct_right, stream) };
         stream.synchronize();
         result
@@ -743,12 +763,15 @@ impl CudaServerKey {
     ///
     /// - `stream` __must__ be synchronized to guarantee computation has finished, and inputs must
     ///   not be dropped until stream is synchronised
-    pub unsafe fn lt_async(
+    pub unsafe fn lt_async<T>(
         &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
+        ct_left: &T,
+        ct_right: &T,
         stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    ) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let mut tmp_lhs;
         let mut tmp_rhs;
 
@@ -780,12 +803,10 @@ impl CudaServerKey {
         self.unchecked_lt_async(lhs, rhs, stream)
     }
 
-    pub fn lt(
-        &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
-        stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    pub fn lt<T>(&self, ct_left: &T, ct_right: &T, stream: &CudaStream) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let result = unsafe { self.lt_async(ct_left, ct_right, stream) };
         stream.synchronize();
         result
@@ -795,12 +816,15 @@ impl CudaServerKey {
     ///
     /// - `stream` __must__ be synchronized to guarantee computation has finished, and inputs must
     ///   not be dropped until stream is synchronised
-    pub unsafe fn unchecked_le_async(
+    pub unsafe fn unchecked_le_async<T>(
         &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
+        ct_left: &T,
+        ct_right: &T,
         stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    ) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         self.unchecked_comparison_async(ct_left, ct_right, ComparisonType::LE, stream)
     }
 
@@ -845,12 +869,15 @@ impl CudaServerKey {
     /// let dec_result = cks.decrypt_bool(&ct_res);
     /// assert_eq!(dec_result, msg1 < msg2);
     /// ```
-    pub fn unchecked_le(
+    pub fn unchecked_le<T>(
         &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
+        ct_left: &T,
+        ct_right: &T,
         stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    ) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let result = unsafe { self.unchecked_le_async(ct_left, ct_right, stream) };
         stream.synchronize();
         result
@@ -860,12 +887,15 @@ impl CudaServerKey {
     ///
     /// - `stream` __must__ be synchronized to guarantee computation has finished, and inputs must
     ///   not be dropped until stream is synchronised
-    pub unsafe fn le_async(
+    pub unsafe fn le_async<T>(
         &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
+        ct_left: &T,
+        ct_right: &T,
         stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    ) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let mut tmp_lhs;
         let mut tmp_rhs;
 
@@ -897,12 +927,10 @@ impl CudaServerKey {
         self.unchecked_le_async(lhs, rhs, stream)
     }
 
-    pub fn le(
-        &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
-        stream: &CudaStream,
-    ) -> CudaBooleanBlock {
+    pub fn le<T>(&self, ct_left: &T, ct_right: &T, stream: &CudaStream) -> CudaBooleanBlock
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let result = unsafe { self.le_async(ct_left, ct_right, stream) };
         stream.synchronize();
         result
@@ -912,12 +940,10 @@ impl CudaServerKey {
     ///
     /// - `stream` __must__ be synchronized to guarantee computation has finished, and inputs must
     ///   not be dropped until stream is synchronised
-    pub unsafe fn unchecked_max_async(
-        &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
-        stream: &CudaStream,
-    ) -> CudaUnsignedRadixCiphertext {
+    pub unsafe fn unchecked_max_async<T>(&self, ct_left: &T, ct_right: &T, stream: &CudaStream) -> T
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         assert_eq!(
             ct_left.as_ref().d_blocks.lwe_dimension(),
             ct_right.as_ref().d_blocks.lwe_dimension()
@@ -955,7 +981,7 @@ impl CudaServerKey {
                     d_bsk.decomp_base_log,
                     lwe_ciphertext_count.0 as u32,
                     ComparisonType::MAX,
-                    false,
+                    T::IS_SIGNED,
                 );
             }
             CudaBootstrappingKey::MultiBit(d_multibit_bsk) => {
@@ -982,7 +1008,7 @@ impl CudaServerKey {
                     d_multibit_bsk.grouping_factor,
                     lwe_ciphertext_count.0 as u32,
                     ComparisonType::MAX,
-                    false,
+                    T::IS_SIGNED,
                 );
             }
         }
@@ -990,12 +1016,10 @@ impl CudaServerKey {
         result
     }
 
-    pub fn unchecked_max(
-        &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
-        stream: &CudaStream,
-    ) -> CudaUnsignedRadixCiphertext {
+    pub fn unchecked_max<T>(&self, ct_left: &T, ct_right: &T, stream: &CudaStream) -> T
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let result = unsafe { self.unchecked_max_async(ct_left, ct_right, stream) };
         stream.synchronize();
         result
@@ -1005,12 +1029,10 @@ impl CudaServerKey {
     ///
     /// - `stream` __must__ be synchronized to guarantee computation has finished, and inputs must
     ///   not be dropped until stream is synchronised
-    pub unsafe fn unchecked_min_async(
-        &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
-        stream: &CudaStream,
-    ) -> CudaUnsignedRadixCiphertext {
+    pub unsafe fn unchecked_min_async<T>(&self, ct_left: &T, ct_right: &T, stream: &CudaStream) -> T
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         assert_eq!(
             ct_left.as_ref().d_blocks.lwe_dimension(),
             ct_right.as_ref().d_blocks.lwe_dimension()
@@ -1048,7 +1070,7 @@ impl CudaServerKey {
                     d_bsk.decomp_base_log,
                     lwe_ciphertext_count.0 as u32,
                     ComparisonType::MIN,
-                    false,
+                    T::IS_SIGNED,
                 );
             }
             CudaBootstrappingKey::MultiBit(d_multibit_bsk) => {
@@ -1075,7 +1097,7 @@ impl CudaServerKey {
                     d_multibit_bsk.grouping_factor,
                     lwe_ciphertext_count.0 as u32,
                     ComparisonType::MIN,
-                    false,
+                    T::IS_SIGNED,
                 );
             }
         }
@@ -1083,12 +1105,10 @@ impl CudaServerKey {
         result
     }
 
-    pub fn unchecked_min(
-        &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
-        stream: &CudaStream,
-    ) -> CudaUnsignedRadixCiphertext {
+    pub fn unchecked_min<T>(&self, ct_left: &T, ct_right: &T, stream: &CudaStream) -> T
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let result = unsafe { self.unchecked_min_async(ct_left, ct_right, stream) };
         stream.synchronize();
         result
@@ -1098,12 +1118,10 @@ impl CudaServerKey {
     ///
     /// - `stream` __must__ be synchronized to guarantee computation has finished, and inputs must
     ///   not be dropped until stream is synchronised
-    pub unsafe fn max_async(
-        &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
-        stream: &CudaStream,
-    ) -> CudaUnsignedRadixCiphertext {
+    pub unsafe fn max_async<T>(&self, ct_left: &T, ct_right: &T, stream: &CudaStream) -> T
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let mut tmp_lhs;
         let mut tmp_rhs;
 
@@ -1134,12 +1152,10 @@ impl CudaServerKey {
         self.unchecked_max_async(lhs, rhs, stream)
     }
 
-    pub fn max(
-        &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
-        stream: &CudaStream,
-    ) -> CudaUnsignedRadixCiphertext {
+    pub fn max<T>(&self, ct_left: &T, ct_right: &T, stream: &CudaStream) -> T
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let result = unsafe { self.max_async(ct_left, ct_right, stream) };
         stream.synchronize();
         result
@@ -1149,12 +1165,10 @@ impl CudaServerKey {
     ///
     /// - `stream` __must__ be synchronized to guarantee computation has finished, and inputs must
     ///   not be dropped until stream is synchronised
-    pub unsafe fn min_async(
-        &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
-        stream: &CudaStream,
-    ) -> CudaUnsignedRadixCiphertext {
+    pub unsafe fn min_async<T>(&self, ct_left: &T, ct_right: &T, stream: &CudaStream) -> T
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let mut tmp_lhs;
         let mut tmp_rhs;
 
@@ -1185,12 +1199,10 @@ impl CudaServerKey {
         self.unchecked_min_async(lhs, rhs, stream)
     }
 
-    pub fn min(
-        &self,
-        ct_left: &CudaUnsignedRadixCiphertext,
-        ct_right: &CudaUnsignedRadixCiphertext,
-        stream: &CudaStream,
-    ) -> CudaUnsignedRadixCiphertext {
+    pub fn min<T>(&self, ct_left: &T, ct_right: &T, stream: &CudaStream) -> T
+    where
+        T: CudaIntegerRadixCiphertext,
+    {
         let result = unsafe { self.min_async(ct_left, ct_right, stream) };
         stream.synchronize();
         result

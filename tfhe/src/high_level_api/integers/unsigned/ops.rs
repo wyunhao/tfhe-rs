@@ -194,10 +194,11 @@ where
             }
             #[cfg(feature = "gpu")]
             InternalServerKey::Cuda(cuda_key) => with_thread_local_cuda_stream(|stream| {
-                let inner_result =
-                    cuda_key
-                        .key
-                        .max(&self.ciphertext.on_gpu(), &rhs.ciphertext.on_gpu(), stream);
+                let inner_result = cuda_key.key.max(
+                    &*self.ciphertext.on_gpu(),
+                    &*rhs.ciphertext.on_gpu(),
+                    stream,
+                );
                 Self::new(inner_result)
             }),
         })
@@ -239,10 +240,11 @@ where
             }
             #[cfg(feature = "gpu")]
             InternalServerKey::Cuda(cuda_key) => with_thread_local_cuda_stream(|stream| {
-                let inner_result =
-                    cuda_key
-                        .key
-                        .min(&self.ciphertext.on_gpu(), &rhs.ciphertext.on_gpu(), stream);
+                let inner_result = cuda_key.key.min(
+                    &*self.ciphertext.on_gpu(),
+                    &*rhs.ciphertext.on_gpu(),
+                    stream,
+                );
                 Self::new(inner_result)
             }),
         })
@@ -400,7 +402,7 @@ where
                 let inner_result =
                     cuda_key
                         .key
-                        .lt(&self.ciphertext.on_gpu(), &rhs.ciphertext.on_gpu(), stream);
+                        .lt(&*self.ciphertext.on_gpu(), &rhs.ciphertext.on_gpu(), stream);
                 FheBool::new(inner_result)
             }),
         })
@@ -438,7 +440,7 @@ where
                 let inner_result =
                     cuda_key
                         .key
-                        .le(&self.ciphertext.on_gpu(), &rhs.ciphertext.on_gpu(), stream);
+                        .le(&*self.ciphertext.on_gpu(), &rhs.ciphertext.on_gpu(), stream);
                 FheBool::new(inner_result)
             }),
         })
@@ -476,7 +478,7 @@ where
                 let inner_result =
                     cuda_key
                         .key
-                        .gt(&self.ciphertext.on_gpu(), &rhs.ciphertext.on_gpu(), stream);
+                        .gt(&*self.ciphertext.on_gpu(), &rhs.ciphertext.on_gpu(), stream);
                 FheBool::new(inner_result)
             }),
         })
@@ -514,7 +516,7 @@ where
                 let inner_result =
                     cuda_key
                         .key
-                        .ge(&self.ciphertext.on_gpu(), &rhs.ciphertext.on_gpu(), stream);
+                        .ge(&*self.ciphertext.on_gpu(), &rhs.ciphertext.on_gpu(), stream);
                 FheBool::new(inner_result)
             }),
         })

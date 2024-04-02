@@ -40,37 +40,37 @@ void scratch_cuda_programmable_bootstrap_cg(
 
   switch (polynomial_size) {
   case 256:
-    scratch_programmable_bootstrap_cg<Torus, STorus, AmortizedDegree<256>>(
+    scratch_programmable_bootstrap_cg<Torus, STorus, Degree<256>>(
         stream, pbs_buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
   case 512:
-    scratch_programmable_bootstrap_cg<Torus, STorus, AmortizedDegree<512>>(
+    scratch_programmable_bootstrap_cg<Torus, STorus, Degree<512>>(
         stream, pbs_buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
   case 1024:
-    scratch_programmable_bootstrap_cg<Torus, STorus, AmortizedDegree<1024>>(
+    scratch_programmable_bootstrap_cg<Torus, STorus, Degree<1024>>(
         stream, pbs_buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
   case 2048:
-    scratch_programmable_bootstrap_cg<Torus, STorus, AmortizedDegree<2048>>(
+    scratch_programmable_bootstrap_cg<Torus, STorus, Degree<2048>>(
         stream, pbs_buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
   case 4096:
-    scratch_programmable_bootstrap_cg<Torus, STorus, AmortizedDegree<4096>>(
+    scratch_programmable_bootstrap_cg<Torus, STorus, Degree<4096>>(
         stream, pbs_buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
   case 8192:
-    scratch_programmable_bootstrap_cg<Torus, STorus, AmortizedDegree<8192>>(
+    scratch_programmable_bootstrap_cg<Torus, STorus, Degree<8192>>(
         stream, pbs_buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
   case 16384:
-    scratch_programmable_bootstrap_cg<Torus, STorus, AmortizedDegree<16384>>(
+    scratch_programmable_bootstrap_cg<Torus, STorus, Degree<16384>>(
         stream, pbs_buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
@@ -90,37 +90,37 @@ void scratch_cuda_programmable_bootstrap(
 
   switch (polynomial_size) {
   case 256:
-    scratch_programmable_bootstrap<Torus, STorus, AmortizedDegree<256>>(
+    scratch_programmable_bootstrap<Torus, STorus, Degree<256>>(
         stream, buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
   case 512:
-    scratch_programmable_bootstrap<Torus, STorus, AmortizedDegree<512>>(
+    scratch_programmable_bootstrap<Torus, STorus, Degree<512>>(
         stream, buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
   case 1024:
-    scratch_programmable_bootstrap<Torus, STorus, AmortizedDegree<1024>>(
+    scratch_programmable_bootstrap<Torus, STorus, Degree<1024>>(
         stream, buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
   case 2048:
-    scratch_programmable_bootstrap<Torus, STorus, AmortizedDegree<2048>>(
+    scratch_programmable_bootstrap<Torus, STorus, Degree<2048>>(
         stream, buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
   case 4096:
-    scratch_programmable_bootstrap<Torus, STorus, AmortizedDegree<4096>>(
+    scratch_programmable_bootstrap<Torus, STorus, Degree<4096>>(
         stream, buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
   case 8192:
-    scratch_programmable_bootstrap<Torus, STorus, AmortizedDegree<8192>>(
+    scratch_programmable_bootstrap<Torus, STorus, Degree<8192>>(
         stream, buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
   case 16384:
-    scratch_programmable_bootstrap<Torus, STorus, AmortizedDegree<16384>>(
+    scratch_programmable_bootstrap<Torus, STorus, Degree<16384>>(
         stream, buffer, glwe_dimension, polynomial_size, level_count,
         input_lwe_ciphertext_count, max_shared_memory, allocate_gpu_memory);
     break;
@@ -194,7 +194,7 @@ void cuda_programmable_bootstrap_cg_lwe_ciphertext_vector(
 
   switch (polynomial_size) {
   case 256:
-    host_programmable_bootstrap_cg<Torus, AmortizedDegree<256>>(
+    host_programmable_bootstrap_cg<Torus, Degree<256>>(
         stream, lwe_array_out, lwe_output_indexes, lut_vector,
         lut_vector_indexes, lwe_array_in, lwe_input_indexes, bootstrapping_key,
         buffer, glwe_dimension, lwe_dimension, polynomial_size, base_log,
@@ -215,28 +215,28 @@ void cuda_programmable_bootstrap_cg_lwe_ciphertext_vector(
         level_count, num_samples, num_luts, max_shared_memory);
     break;
   case 2048:
-    host_programmable_bootstrap_cg<Torus, AmortizedDegree<2048>>(
+    host_programmable_bootstrap_cg<Torus, Degree<2048>>(
         stream, lwe_array_out, lwe_output_indexes, lut_vector,
         lut_vector_indexes, lwe_array_in, lwe_input_indexes, bootstrapping_key,
         buffer, glwe_dimension, lwe_dimension, polynomial_size, base_log,
         level_count, num_samples, num_luts, max_shared_memory);
     break;
   case 4096:
-    host_programmable_bootstrap_cg<Torus, AmortizedDegree<4096>>(
+    host_programmable_bootstrap_cg<Torus, Degree<4096>>(
         stream, lwe_array_out, lwe_output_indexes, lut_vector,
         lut_vector_indexes, lwe_array_in, lwe_input_indexes, bootstrapping_key,
         buffer, glwe_dimension, lwe_dimension, polynomial_size, base_log,
         level_count, num_samples, num_luts, max_shared_memory);
     break;
   case 8192:
-    host_programmable_bootstrap_cg<Torus, AmortizedDegree<8192>>(
+    host_programmable_bootstrap_cg<Torus, Degree<8192>>(
         stream, lwe_array_out, lwe_output_indexes, lut_vector,
         lut_vector_indexes, lwe_array_in, lwe_input_indexes, bootstrapping_key,
         buffer, glwe_dimension, lwe_dimension, polynomial_size, base_log,
         level_count, num_samples, num_luts, max_shared_memory);
     break;
   case 16384:
-    host_programmable_bootstrap_cg<Torus, AmortizedDegree<16384>>(
+    host_programmable_bootstrap_cg<Torus, Degree<16384>>(
         stream, lwe_array_out, lwe_output_indexes, lut_vector,
         lut_vector_indexes, lwe_array_in, lwe_input_indexes, bootstrapping_key,
         buffer, glwe_dimension, lwe_dimension, polynomial_size, base_log,
@@ -261,7 +261,7 @@ void cuda_programmable_bootstrap_lwe_ciphertext_vector(
 
   switch (polynomial_size) {
   case 256:
-    host_programmable_bootstrap<Torus, AmortizedDegree<256>>(
+    host_programmable_bootstrap<Torus, Degree<256>>(
         stream, lwe_array_out, lwe_output_indexes, lut_vector,
         lut_vector_indexes, lwe_array_in, lwe_input_indexes, bootstrapping_key,
         buffer, glwe_dimension, lwe_dimension, polynomial_size, base_log,
@@ -282,28 +282,28 @@ void cuda_programmable_bootstrap_lwe_ciphertext_vector(
         level_count, num_samples, num_luts, max_shared_memory);
     break;
   case 2048:
-    host_programmable_bootstrap<Torus, AmortizedDegree<2048>>(
+    host_programmable_bootstrap<Torus, Degree<2048>>(
         stream, lwe_array_out, lwe_output_indexes, lut_vector,
         lut_vector_indexes, lwe_array_in, lwe_input_indexes, bootstrapping_key,
         buffer, glwe_dimension, lwe_dimension, polynomial_size, base_log,
         level_count, num_samples, num_luts, max_shared_memory);
     break;
   case 4096:
-    host_programmable_bootstrap<Torus, AmortizedDegree<4096>>(
+    host_programmable_bootstrap<Torus, Degree<4096>>(
         stream, lwe_array_out, lwe_output_indexes, lut_vector,
         lut_vector_indexes, lwe_array_in, lwe_input_indexes, bootstrapping_key,
         buffer, glwe_dimension, lwe_dimension, polynomial_size, base_log,
         level_count, num_samples, num_luts, max_shared_memory);
     break;
   case 8192:
-    host_programmable_bootstrap<Torus, AmortizedDegree<8192>>(
+    host_programmable_bootstrap<Torus, Degree<8192>>(
         stream, lwe_array_out, lwe_output_indexes, lut_vector,
         lut_vector_indexes, lwe_array_in, lwe_input_indexes, bootstrapping_key,
         buffer, glwe_dimension, lwe_dimension, polynomial_size, base_log,
         level_count, num_samples, num_luts, max_shared_memory);
     break;
   case 16384:
-    host_programmable_bootstrap<Torus, AmortizedDegree<16384>>(
+    host_programmable_bootstrap<Torus, Degree<16384>>(
         stream, lwe_array_out, lwe_output_indexes, lut_vector,
         lut_vector_indexes, lwe_array_in, lwe_input_indexes, bootstrapping_key,
         buffer, glwe_dimension, lwe_dimension, polynomial_size, base_log,

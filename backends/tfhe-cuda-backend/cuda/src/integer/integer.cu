@@ -10,49 +10,49 @@ void cuda_full_propagation_64_inplace(
 
   switch (polynomial_size) {
   case 256:
-    host_full_propagate_inplace<uint64_t, int64_t, AmortizedDegree<256>>(
+    host_full_propagate_inplace<uint64_t, int64_t, Degree<256>>(
         stream, static_cast<uint64_t *>(input_blocks),
         (int_fullprop_buffer<uint64_t> *)mem_ptr, static_cast<uint64_t *>(ksk),
         bsk, lwe_dimension, glwe_dimension, polynomial_size, ks_base_log,
         ks_level, pbs_base_log, pbs_level, grouping_factor, num_blocks);
     break;
   case 512:
-    host_full_propagate_inplace<uint64_t, int64_t, AmortizedDegree<512>>(
+    host_full_propagate_inplace<uint64_t, int64_t, Degree<512>>(
         stream, static_cast<uint64_t *>(input_blocks),
         (int_fullprop_buffer<uint64_t> *)mem_ptr, static_cast<uint64_t *>(ksk),
         bsk, lwe_dimension, glwe_dimension, polynomial_size, ks_base_log,
         ks_level, pbs_base_log, pbs_level, grouping_factor, num_blocks);
     break;
   case 1024:
-    host_full_propagate_inplace<uint64_t, int64_t, AmortizedDegree<1024>>(
+    host_full_propagate_inplace<uint64_t, int64_t, Degree<1024>>(
         stream, static_cast<uint64_t *>(input_blocks),
         (int_fullprop_buffer<uint64_t> *)mem_ptr, static_cast<uint64_t *>(ksk),
         bsk, lwe_dimension, glwe_dimension, polynomial_size, ks_base_log,
         ks_level, pbs_base_log, pbs_level, grouping_factor, num_blocks);
     break;
   case 2048:
-    host_full_propagate_inplace<uint64_t, int64_t, AmortizedDegree<2048>>(
+    host_full_propagate_inplace<uint64_t, int64_t, Degree<2048>>(
         stream, static_cast<uint64_t *>(input_blocks),
         (int_fullprop_buffer<uint64_t> *)mem_ptr, static_cast<uint64_t *>(ksk),
         bsk, lwe_dimension, glwe_dimension, polynomial_size, ks_base_log,
         ks_level, pbs_base_log, pbs_level, grouping_factor, num_blocks);
     break;
   case 4096:
-    host_full_propagate_inplace<uint64_t, int64_t, AmortizedDegree<4096>>(
+    host_full_propagate_inplace<uint64_t, int64_t, Degree<4096>>(
         stream, static_cast<uint64_t *>(input_blocks),
         (int_fullprop_buffer<uint64_t> *)mem_ptr, static_cast<uint64_t *>(ksk),
         bsk, lwe_dimension, glwe_dimension, polynomial_size, ks_base_log,
         ks_level, pbs_base_log, pbs_level, grouping_factor, num_blocks);
     break;
   case 8192:
-    host_full_propagate_inplace<uint64_t, int64_t, AmortizedDegree<8192>>(
+    host_full_propagate_inplace<uint64_t, int64_t, Degree<8192>>(
         stream, static_cast<uint64_t *>(input_blocks),
         (int_fullprop_buffer<uint64_t> *)mem_ptr, static_cast<uint64_t *>(ksk),
         bsk, lwe_dimension, glwe_dimension, polynomial_size, ks_base_log,
         ks_level, pbs_base_log, pbs_level, grouping_factor, num_blocks);
     break;
   case 16384:
-    host_full_propagate_inplace<uint64_t, int64_t, AmortizedDegree<16384>>(
+    host_full_propagate_inplace<uint64_t, int64_t, Degree<16384>>(
         stream, static_cast<uint64_t *>(input_blocks),
         (int_fullprop_buffer<uint64_t> *)mem_ptr, static_cast<uint64_t *>(ksk),
         bsk, lwe_dimension, glwe_dimension, polynomial_size, ks_base_log,

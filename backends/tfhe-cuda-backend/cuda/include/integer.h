@@ -287,14 +287,13 @@ void scratch_cuda_integer_div_rem_radix_ciphertext_kb_64(
     PBS_TYPE pbs_type, bool allocate_gpu_memory);
 
 void cuda_integer_div_rem_radix_ciphertext_kb_64(
-    cuda_stream_t *stream, void *quotient, void *remainder,
-    void *numerator, void *divisor, int8_t *mem_ptr, void *bsk,
-    void *ksk, uint32_t num_blocks_in_radix);
+    cuda_stream_t *stream, void *quotient, void *remainder, void *numerator,
+    void *divisor, int8_t *mem_ptr, void *bsk, void *ksk,
+    uint32_t num_blocks_in_radix);
 
-void cleanup_cuda_integer_div_rem(cuda_stream_t *stream,
-                                                int8_t **mem_ptr_void);
+void cleanup_cuda_integer_div_rem(cuda_stream_t *stream, int8_t **mem_ptr_void);
 
-}   //extern C
+} // extern C
 
 template <typename Torus>
 __global__ void radix_blocks_rotate_right(Torus *dst, Torus *src,
@@ -1599,29 +1598,6 @@ template <typename Torus> struct int_arithmetic_scalar_shift_buffer {
   }
 };
 
-template <typename Torus> struct int_div_rem_memory {
-  int_radix_params params;
-  bool mem_reuse = false;
-  int_logical_scalar_shift_buffer<Torus> *shift_mem;
-  int_overflowing_sub_memory<Torus> *overflow_sub_mem;
-  int_div_rem_memory(cuda_stream_t *stream, int_radix_params params,
-                     uint32_t num_blocks, bool allocate_gpu_memory) {
-    this->params = params;
-    shift_mem = new int_logical_scalar_shift_buffer<Torus>(
-        stream, SHIFT_OR_ROTATE_TYPE::LEFT_SHIFT,  params, num_blocks, true);
-    overflow_sub_mem = new int_overflowing_sub_memory<Torus>(
-        stream, params, num_blocks, true);
-  }
-  void release(cuda_stream_t *stream) {
-    shift_mem->release(stream);
-    overflow_sub_mem->release(stream);
-
-    delete shift_mem;
-    delete overflow_sub_mem;
-  }
-};
-
-
 template <typename Torus> struct int_zero_out_if_buffer {
 
   int_radix_params params;
@@ -2171,6 +2147,35 @@ template <typename Torus> struct int_comparison_buffer {
     }
     cuda_destroy_stream(lsb_stream);
     cuda_destroy_stream(msb_stream);
+  }
+};
+
+template <typename Torus> struct int_div_rem_memory {
+  int_radix_params params;
+  bool mem_reuse = false;
+  int_logical_scalar_shift_buffer<Torus> *shift_mem;
+  int_overflowing_sub_memory<Torus> *overflow_sub_mem;
+  int_comparison_buffer<Torus> *comparison_buffer;
+  int_div_rem_memory(cuda_stream_t *stream, int_radix_params params,
+                     uint32_t num_blocks, bool allocate_gpu_memory) {
+    this->params = params;
+    shift_mem = new int_logical_scalar_shift_buffer<Torus>(
+        stream, SHIFT_OR_ROTATE_TYPE::LEFT_SHIFT, params, num_blocks, true);
+
+    overflow_sub_mem =
+        new int_overflowing_sub_memory<Torus>(stream, params, num_blocks, true);
+
+    comparison_buffer = new int_comparison_buffer<Torus>(
+        stream, COMPARISON_TYPE::NE, params, num_blocks, false, true);
+  }
+  void release(cuda_stream_t *stream) {
+    shift_mem->release(stream);
+    overflow_sub_mem->release(stream);
+    comparison_buffer->release(stream);
+
+    delete shift_mem;
+    delete overflow_sub_mem;
+    delete comparison_buffer;
   }
 };
 

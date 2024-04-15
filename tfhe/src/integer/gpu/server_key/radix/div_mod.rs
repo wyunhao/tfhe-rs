@@ -3,7 +3,6 @@ use crate::integer::gpu::ciphertext::CudaIntegerRadixCiphertext;
 use crate::integer::gpu::server_key::{CudaBootstrappingKey, CudaServerKey};
 
 impl CudaServerKey {
-
     /// # Safety
     ///
     /// - `stream` __must__ be synchronized to guarantee computation has finished, and inputs must
@@ -87,7 +86,13 @@ impl CudaServerKey {
         let mut remainder = unsafe { numerator.duplicate_async(stream) };
 
         unsafe {
-            self.unsigned_unchecked_div_rem_assign_async(&mut quotient, &mut remainder, numerator, divisor, stream);
+            self.unsigned_unchecked_div_rem_assign_async(
+                &mut quotient,
+                &mut remainder,
+                numerator,
+                divisor,
+                stream,
+            );
         }
         (quotient, remainder)
     }
@@ -117,18 +122,18 @@ impl CudaServerKey {
         ) {
             (true, true) => (numerator, divisor),
             (true, false) => {
-                tmp_divisor = unsafe {divisor.duplicate_async(stream) };
-                unsafe {self.full_propagate_assign_async(&mut tmp_divisor, stream) };
+                tmp_divisor = unsafe { divisor.duplicate_async(stream) };
+                unsafe { self.full_propagate_assign_async(&mut tmp_divisor, stream) };
                 (numerator, &tmp_divisor)
             }
             (false, true) => {
-                tmp_numerator = unsafe {numerator.duplicate_async(stream) };
+                tmp_numerator = unsafe { numerator.duplicate_async(stream) };
                 unsafe { self.full_propagate_assign_async(&mut tmp_numerator, stream) };
                 (&tmp_numerator, divisor)
             }
             (false, false) => {
                 tmp_divisor = unsafe { divisor.duplicate_async(stream) };
-                tmp_numerator = unsafe {numerator.duplicate_async(stream) };
+                tmp_numerator = unsafe { numerator.duplicate_async(stream) };
                 unsafe {
                     self.full_propagate_assign_async(&mut tmp_numerator, stream);
                     self.full_propagate_assign_async(&mut tmp_divisor, stream);
@@ -149,5 +154,4 @@ impl CudaServerKey {
         let (q, _r) = self.div_rem(numerator, divisor, stream);
         q
     }
-
 }

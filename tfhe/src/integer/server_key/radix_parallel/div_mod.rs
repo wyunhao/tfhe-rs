@@ -171,7 +171,18 @@ impl ServerKey {
             })
             .collect::<Vec<_>>();
 
+        {
+            // debug
+            for biv_lut in &merge_overflow_flags_luts {
+                println!("rust_biv_lut: {:?}", biv_lut.acc);
+            }
+        }
+
         for i in (0..total_bits as usize).rev() {
+            {
+                // debug
+                println!("i = {}", i);
+            }
             let block_of_bit = i / num_bits_in_message as usize;
             let pos_in_block = i % num_bits_in_message as usize;
 
@@ -185,6 +196,14 @@ impl ServerKey {
             // This number is in range 1..=num_bocks -1
             let first_trivial_block = last_non_trivial_block + 1;
 
+            {
+                // debug
+                println!("last_non_trivial_block: {:?}", last_non_trivial_block);
+                println!(
+                    "(msb_bit_set + 1) / num_bits_in_message: {:?}",
+                    ((msb_bit_set + 1) / num_bits_in_message as usize)
+                );
+            }
             // All blocks starting from the first_trivial_block are known to be trivial
             // So we can avoid work.
             // Note that, these are always non-empty (i.e. there is always at least one non trivial
@@ -199,6 +218,30 @@ impl ServerKey {
                 divisor.blocks[((msb_bit_set + 1) / num_bits_in_message as usize)..].to_vec(),
             );
 
+            {
+                //debug
+                for block in &interesting_remainder1.blocks {
+                    println!(
+                        "rust_interesting_remainder1: {:?}",
+                        block.ct.get_body().data
+                    );
+                }
+
+                for block in &interesting_remainder2.blocks {
+                    println!(
+                        "rust_interesting_remainder2: {:?}",
+                        block.ct.get_body().data
+                    );
+                }
+
+                for block in &interesting_divisor.blocks {
+                    println!("rust_interesting_divisor: {:?}", block.ct.get_body().data);
+                }
+
+                for block in &divisor_ms_blocks.blocks {
+                    println!("rust_divisor_ms_blocks: {:?}", block.ct.get_body().data);
+                }
+            }
             // We split the divisor at a block position, when in reality the split should be at a
             // bit position meaning that potentially (depending on msb_bit_set) the
             // split versions share some bits they should not. So we do one PBS on the

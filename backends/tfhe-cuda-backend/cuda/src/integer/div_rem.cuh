@@ -373,16 +373,29 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       numerator_block.clone_from(numerator_block_stack,
                                  numerator_block_stack.len - 1,
                                  numerator_block_stack.len - 1, stream);
+
       numerator_block_stack.pop();
+
       interesting_remainder1.insert(0, numerator_block.first_block(), stream);
+      { // debug
+        numerator_block.print_blocks_body("numerator_block");
+        interesting_remainder1.print_blocks_body("interesting_remainder1");
+      }
       host_integer_radix_logical_scalar_shift_kb_inplace(
           stream, interesting_remainder1.data, 1, mem_ptr->shift_mem, bsk, ksk,
           interesting_remainder1.len);
+      { // debug
+        interesting_remainder1.print_blocks_body("interesting_remainder1");
+        printf("interesting_remainder1.len: %u \n", interesting_remainder1.len);
+      }
 
-      radix_blocks_rotate_left<<<num_blocks, 256, 0, stream->stream>>>(
+      radix_blocks_rotate_left<<<interesting_remainder1.len, 256, 0, stream->stream>>>(
           interesting_remainder1.data, interesting_remainder1.data, 1,
-          num_blocks, big_lwe_size);
+          interesting_remainder1.len, big_lwe_size);
 
+      { // debug
+        interesting_remainder1.print_blocks_body("interesting_remainder1");
+      }
       numerator_block.clone_from(interesting_remainder1,
                                  interesting_remainder1.len - 1,
                                  interesting_remainder1.len - 1, stream);
@@ -391,6 +404,9 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       if (pos_in_block != 0) {
         // We have not yet extracted all the bits from this numerator
         // so, we put it back on the front so that it gets taken next iteration
+        { // debug
+          numerator_block.print_blocks_body("numerator_block");
+        }
         numerator_block_stack.push(numerator_block.first_block(), stream);
       }
 
@@ -404,27 +420,27 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
 
     #pragma omp parallel sections
     {
-      #pragma omp section
-      {
-        // interesting_divisor
-        trim_last_interesting_divisor_bits(sub_stream_1);
-      }
-      #pragma omp section
-      {
-        // divisor_ms_blocks
-        trim_first_divisor_ms_bits(sub_stream_2);
-      }
-      #pragma omp section
+//      #pragma omp section
+//      {
+//        // interesting_divisor
+//        trim_last_interesting_divisor_bits(sub_stream_1);
+//      }
+//      #pragma omp section
+//      {
+//        // divisor_ms_blocks
+//        trim_first_divisor_ms_bits(sub_stream_2);
+//      }
+//      #pragma omp section
       {
         // interesting_remainder1
         // numerator_block_stack
         left_shift_interesting_remainder1(sub_stream_3);
       }
-      #pragma omp section
-      {
-        // interesting_remainder2
-        left_shift_interesting_remainder2(sub_stream_4);
-      }
+//      #pragma omp section
+//      {
+//        // interesting_remainder2
+//        left_shift_interesting_remainder2(sub_stream_4);
+//      }
     }
     cuda_synchronize_stream(sub_stream_1);
     cuda_synchronize_stream(sub_stream_2);
@@ -440,15 +456,18 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       interesting_remainder2.print_blocks_body("cuda_interesting_remainder2");
     }
 
-    //
-    //    // left_shift_interesting_remainder2
-    //    host_integer_radix_logical_scalar_shift_kb_inplace(
-    //        stream, interesting_remainder2, 1, mem_ptr->shift_mem, bsk, ksk,
-    //        num_blocks);
-    //
-    //    cuda_memcpy_async_gpu_to_gpu(merged_interesting_remainder,
-    //                                 interesting_remainder1, radix_size_bytes,
-    //                                 stream);
+    // if interesting_remainder1 != 0 -> interesting_remainder2 == 0
+    // if interesting_remainder1 == 0 -> interesting_remainder2 != 0
+    // In practice interesting_remainder1 contains the numerator bit,
+    // but in that position, interesting_remainder2 always has a 0
+    merged_interesting_remainder.clone_from(interesting_remainder1, 0,
+                                            interesting_remainder1.len - 1,
+                                            stream);
+
+    { // debug
+      merged_interesting_remainder.print_blocks_body
+          ("merged_interesting_remainder");
+    }
     //
     //    host_addition(stream, merged_interesting_remainder,
     //                  merged_interesting_remainder, interesting_remainder2,

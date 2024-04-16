@@ -2160,7 +2160,7 @@ template <typename Torus> struct int_div_rem_memory {
                      uint32_t num_blocks, bool allocate_gpu_memory) {
     this->params = params;
     shift_mem = new int_logical_scalar_shift_buffer<Torus>(
-        stream, SHIFT_OR_ROTATE_TYPE::LEFT_SHIFT, params, num_blocks, true);
+        stream, SHIFT_OR_ROTATE_TYPE::LEFT_SHIFT, params, 2 * num_blocks, true);
 
     overflow_sub_mem =
         new int_overflowing_sub_memory<Torus>(stream, params, num_blocks, true);

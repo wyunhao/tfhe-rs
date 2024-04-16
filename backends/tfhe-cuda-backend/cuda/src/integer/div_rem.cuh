@@ -176,6 +176,8 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
                                num_bits_in_message * num_blocks, true);
   int_radix_lut<Torus> *masking_lut =
       new int_radix_lut<Torus>(stream, radix_params, 1, num_blocks, true);
+  int_radix_lut<Torus> *masking_lut2 =
+      new int_radix_lut<Torus>(stream, radix_params, 1, num_blocks, true);
 
   uint32_t numerator_block_stack_size = num_blocks;
   uint32_t interesting_remainder1_size = 0;
@@ -270,6 +272,9 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
 
     auto trim_last_interesting_divisor_bits = [&](cuda_stream_t *stream) {
       if ((msb_bit_set + 1) % num_bits_in_message == 0) {
+        {   // debug
+          printf("cuda trim_last_interesting_divisor_bits dabrunda\n");
+        }
         return;
       }
       // The last block of the interesting part of the remainder
@@ -293,6 +298,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       // Shift the mask so that we will only keep bits we should
       uint32_t shifted_mask = full_message_mask >> shift_amount;
 
+      printf("shifted_mask: %u \n", shifted_mask);
       // TODO move in scratch
       std::function<Torus(Torus)> lut_f_masking;
       lut_f_masking = [shifted_mask](Torus x) -> Torus {
@@ -304,7 +310,12 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
           radix_params.carry_modulus, lut_f_masking);
 
       // end of move in scratch
-
+      { // debug
+       print_debug("masking_lut#1", masking_lut->lut,
+                    (radix_params.glwe_dimension + 1) *
+                                                           radix_params
+                            .polynomial_size);
+      }
       integer_radix_apply_univariate_lookup_table_kb(
           stream, interesting_divisor.last_block(),
           interesting_divisor.last_block(), bsk, ksk, 1, masking_lut);
@@ -332,20 +343,20 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       // the estimated degree of the output is < msg_modulus
       shifted_mask = shifted_mask & full_message_mask;
 
-      // TODO movie in scratch
+      // TODO move in scratch
       std::function<Torus(Torus)> lut_f_masking;
       lut_f_masking = [shifted_mask](Torus x) -> Torus {
         return x & shifted_mask;
       };
       generate_device_accumulator<Torus>(
-          stream, masking_lut->lut, radix_params.glwe_dimension,
+          stream, masking_lut2->lut, radix_params.glwe_dimension,
           radix_params.polynomial_size, radix_params.message_modulus,
           radix_params.carry_modulus, lut_f_masking);
       // end of move in scratch
 
       integer_radix_apply_univariate_lookup_table_kb(
           stream, divisor_ms_blocks.first_block(),
-          divisor_ms_blocks.first_block(), bsk, ksk, 1, masking_lut);
+          divisor_ms_blocks.first_block(), bsk, ksk, 1, masking_lut2);
 
     }; // trim_first_divisor_ms_bits
 
@@ -366,7 +377,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       interesting_remainder1.insert(0, numerator_block.first_block(), stream);
       host_integer_radix_logical_scalar_shift_kb_inplace(
           stream, interesting_remainder1.data, 1, mem_ptr->shift_mem, bsk, ksk,
-          num_blocks);
+          interesting_remainder1.len);
 
       radix_blocks_rotate_left<<<num_blocks, 256, 0, stream->stream>>>(
           interesting_remainder1.data, interesting_remainder1.data, 1,
@@ -419,6 +430,15 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     cuda_synchronize_stream(sub_stream_2);
     cuda_synchronize_stream(sub_stream_3);
     cuda_synchronize_stream(sub_stream_4);
+
+    { // debug
+      printf("cuda chunk #1-----------------\n");
+      interesting_divisor.print_blocks_body("cuda_interesting_divisor");
+      divisor_ms_blocks.print_blocks_body("cuda_divisor_ms_blocks");
+      interesting_remainder1.print_blocks_body("cuda_interesting_remainder1");
+      numerator_block_stack.print_blocks_body("cuda_numerator_block_stack");
+      interesting_remainder2.print_blocks_body("cuda_interesting_remainder2");
+    }
 
     //
     //    // left_shift_interesting_remainder2

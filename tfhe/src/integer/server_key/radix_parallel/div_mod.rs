@@ -250,6 +250,9 @@ impl ServerKey {
 
             let mut trim_last_interesting_divisor_bits = || {
                 if ((msb_bit_set + 1) % num_bits_in_message as usize) == 0 {
+                    {   // debug
+                        println!("rust trim_last_interesting_divisor_bits dabrunda");
+                    }
                     return;
                 }
                 // The last block of the interesting part of the remainder
@@ -269,7 +272,9 @@ impl ServerKey {
                 // Shift the mask so that we will only keep bits we should
                 let shifted_mask = full_message_mask >> shift_amount;
 
+                println!("shifted_mask: {:?}", shifted_mask);
                 let masking_lut = self.key.generate_lookup_table(|x| x & shifted_mask);
+                println!("rust masking_lut #1 : {:?}", masking_lut.acc);
                 self.key.apply_lookup_table_assign(
                     interesting_divisor.blocks.last_mut().unwrap(),
                     &masking_lut,
@@ -356,6 +361,31 @@ impl ServerKey {
                 &mut left_shift_interesting_remainder2,
             ];
             tasks.into_par_iter().for_each(|task| task());
+
+            {   // debug
+                println!("rust chunk #1-----------------");
+
+                for block in &interesting_divisor.blocks {
+                    println!("rust_interesting_divisor: {:?}", block.ct.get_body().data);
+                }
+
+                for block in &divisor_ms_blocks.blocks {
+                    println!("rust_divisor_ms_blocks: {:?}", block.ct.get_body().data);
+                }
+
+                for block in &interesting_remainder1.blocks {
+                    println!("rust_interesting_remainder1: {:?}", block.ct.get_body().data);
+                }
+
+                for block in &numerator_block_stack {
+                    println!("rust_numerator_block_stack: {:?}", block.ct.get_body().data);
+                }
+
+                for block in &interesting_remainder2.blocks {
+                    println!("rust_interesting_remainder2: {:?}", block.ct.get_body().data);
+                }
+            }
+
 
             // if interesting_remainder1 != 0 -> interesting_remainder2 == 0
             // if interesting_remainder1 == 0 -> interesting_remainder2 != 0

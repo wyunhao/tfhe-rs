@@ -464,6 +464,13 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
                   interesting_remainder2.data, radix_params.big_lwe_dimension,
                   num_blocks);
 
+    // after create_clean_version_of_merged_remainder
+    // `merged_interesting_remainder` will be reused as
+    // `cleaned_merged_interesting_remainder`
+    cleaned_merged_interesting_remainder.clone_from
+        (merged_interesting_remainder, 0, merged_interesting_remainder.len -
+                                              1, stream);
+
     { // debug
       merged_interesting_remainder.print_blocks_body(
           "merged_interesting_remainder_after_add");
@@ -491,26 +498,25 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
         cuda_memset_async(at_least_one_upper_block_is_non_zero.first_block(), 0,
                           big_lwe_size_bytes, stream);
       } else {
+
+        printf("trivial_blocks.len: %u\n", trivial_blocks.len); // debug
         // We could call unchecked_scalar_ne
         // But we are in the special case where scalar == 0
         // So we can skip some stuff
         host_compare_with_zero_equality(
             stream, tmp1.data, trivial_blocks.data, mem_ptr->comparison_buffer,
-            bsk, ksk, num_blocks,
+            bsk, ksk, trivial_blocks.len,
             mem_ptr->comparison_buffer->eq_buffer->is_non_zero_lut);
+        tmp1.len = 1;
 
+        {
+          tmp1.print_blocks_body("tmp1");
+        }
         is_at_least_one_comparisons_block_true(
             stream, at_least_one_upper_block_is_non_zero.data, tmp1.data,
-            mem_ptr->comparison_buffer, bsk, ksk, num_blocks);
+            mem_ptr->comparison_buffer, bsk, ksk, tmp1.len);
       }
     };
-
-    // after create_clean_version_of_merged_remainder
-    // `merged_interesting_remainder` will be reused as
-    // `cleaned_merged_interesting_remainder`
-    cleaned_merged_interesting_remainder.clone_from
-        (merged_interesting_remainder, 0, merged_interesting_remainder.len -
-                                              1, stream);
 
     // Creates a cleaned version (noise wise) of the merged remainder
     // so that it can be safely used in bivariate PBSes
@@ -520,7 +526,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       auto lut_f_message_extract = [message_modulus](Torus x) -> Torus {
         return x % message_modulus;
       };
-      auto cur_lut = merge_overflow_flags_luts->get_lut(0);
+      auto cur_lut = message_extract_lut->get_lut(0);
       generate_device_accumulator<Torus>(
           stream, cur_lut, radix_params.glwe_dimension,
           radix_params.polynomial_size, radix_params.message_modulus,
@@ -561,6 +567,10 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       printf("new_remainder.len: %u\n", new_remainder.len);
       new_remainder.print_blocks_body("new_remainder");
       subtraction_overflowed.print_blocks_body("subtraction_overflowed");
+      at_least_one_upper_block_is_non_zero.print_blocks_body
+          ("at_least_one_upper_block_is_non_zero");
+      cleaned_merged_interesting_remainder.print_blocks_body
+          ("cleaned_merged_interesting_remainder");
     }
 
 

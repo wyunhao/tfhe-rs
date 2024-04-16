@@ -426,8 +426,20 @@ impl ServerKey {
                     // We could call unchecked_scalar_ne_parallelized
                     // But we are in the special case where scalar == 0
                     // So we can skip some stuff
+                    println!("rust_trivial_blocks.len: {:?}", trivial_blocks.len());
                     let tmp = self
                         .compare_blocks_with_zero(trivial_blocks, ZeroComparisonType::Difference);
+
+                    {
+                        // debug
+                        for block in &tmp {
+                            println!(
+                                "rust_tmp: {:?}",
+                                block.ct.get_body().data
+                            );
+                        }
+                    }
+
                     self.is_at_least_one_comparisons_block_true(tmp)
                 }
             };
@@ -470,6 +482,16 @@ impl ServerKey {
                     "subtraction_overflowed: {:?}",
                     subtraction_overflowed.0.ct.get_body().data);
 
+                println!(
+                    "at_least_one_upper_block_is_non_zero: {:?}",
+                    at_least_one_upper_block_is_non_zero.ct.get_body().data);
+
+                for block in &cleaned_merged_interesting_remainder.blocks {
+                    println!(
+                        "cleaned_merged_interesting_remainder: {:?}",
+                        block.ct.get_body().data
+                    );
+                }
             }
 
             let overflow_sum = self.key.unchecked_add(

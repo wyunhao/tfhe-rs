@@ -19,6 +19,9 @@
 #include <string>
 #include <vector>
 
+int ceil_div(int a, int b) {
+  return (a + b - 1) / b;
+}
 template <typename Torus> struct ciphertext_list {
   Torus *data;
   size_t max_blocks;
@@ -133,6 +136,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
   auto radix_size_bytes = big_lwe_size_bytes * num_blocks;
 
   uint32_t message_modulus = radix_params.message_modulus;
+  uint32_t carry_modulus = radix_params.carry_modulus;
   uint32_t num_bits_in_message = 31 - __builtin_clz(message_modulus);
   uint32_t total_bits = num_bits_in_message * num_blocks;
 
@@ -507,7 +511,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
             stream, tmp1.data, trivial_blocks.data, mem_ptr->comparison_buffer,
             bsk, ksk, trivial_blocks.len,
             mem_ptr->comparison_buffer->eq_buffer->is_non_zero_lut);
-        tmp1.len = 1;
+        tmp1.len = ceil_div(trivial_blocks.len, message_modulus * carry_modulus - 1);
 
         {
           tmp1.print_blocks_body("tmp1");

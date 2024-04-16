@@ -141,22 +141,14 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
   cuda_stream_t *sub_stream_3 = new cuda_stream_t(stream->gpu_index);
   cuda_stream_t *sub_stream_4 = new cuda_stream_t(stream->gpu_index);
 
-  cudaEvent_t eventMain;
-  cudaEvent_t event1, event2, event3, event4;
-  cudaEventCreate(&eventMain);
-  cudaEventCreate(&event1);
-  cudaEventCreate(&event2);
-  cudaEventCreate(&event3);
-  cudaEventCreate(&event4);
-
-
   ciphertext_list<Torus> remainder1(radix_params, num_blocks, stream);
   ciphertext_list<Torus> remainder2(radix_params, num_blocks, stream);
   ciphertext_list<Torus> numerator_block_stack(radix_params, num_blocks,
                                                stream);
   ciphertext_list<Torus> numerator_block(radix_params, 1, stream);
+  ciphertext_list<Torus> numerator_block2(radix_params, 1, stream);
 
-  ciphertext_list<Torus> interesting_remainder1(radix_params, num_blocks,
+  ciphertext_list<Torus> interesting_remainder1(radix_params, num_blocks + 1,
                                                 stream);
   ciphertext_list<Torus> interesting_remainder2(radix_params, num_blocks,
                                                 stream);
@@ -317,7 +309,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
           stream, interesting_divisor.last_block(),
           interesting_divisor.last_block(), bsk, ksk, 1, masking_lut);
 
-      cudaEventRecord(event1, stream->stream);
     }; // trim_last_interesting_divisor_bits
 
     auto trim_first_divisor_ms_bits = [&](cuda_stream_t *stream) {
@@ -355,7 +346,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       integer_radix_apply_univariate_lookup_table_kb(
           stream, divisor_ms_blocks.first_block(),
           divisor_ms_blocks.first_block(), bsk, ksk, 1, masking_lut);
-      cudaEventRecord(event2, stream->stream);
 
     }; // trim_first_divisor_ms_bits
 
@@ -392,7 +382,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
         // so, we put it back on the front so that it gets taken next iteration
         numerator_block_stack.push(numerator_block.first_block(), stream);
       }
-      cudaEventRecord(event3, stream->stream);
 
     };  // left_shift_interesting_remainder1
 
@@ -400,42 +389,37 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       host_integer_radix_logical_scalar_shift_kb_inplace(
           stream, interesting_remainder2.data, 1, mem_ptr->shift_mem, bsk, ksk,
           num_blocks);
-      cudaEventRecord(event4, stream->stream);
-
-
     };  // left_shift_interesting_remainder2
-
-    cudaEventRecord(eventMain, stream->stream);
-
-    cudaStreamWaitEvent(sub_stream_1->stream, eventMain, 0);
-    cudaStreamWaitEvent(sub_stream_2->stream, eventMain, 0);
-    cudaStreamWaitEvent(sub_stream_3->stream, eventMain, 0);
-    cudaStreamWaitEvent(sub_stream_4->stream, eventMain, 0);
 
     #pragma omp parallel sections
     {
       #pragma omp section
       {
+        // interesting_divisor
         trim_last_interesting_divisor_bits(sub_stream_1);
       }
       #pragma omp section
       {
+        // divisor_ms_blocks
         trim_first_divisor_ms_bits(sub_stream_2);
       }
       #pragma omp section
       {
+        // interesting_remainder1
+        // numerator_block_stack
         left_shift_interesting_remainder1(sub_stream_3);
       }
       #pragma omp section
       {
+        // interesting_remainder2
         left_shift_interesting_remainder2(sub_stream_4);
       }
     }
+    cuda_synchronize_stream(sub_stream_1);
+    cuda_synchronize_stream(sub_stream_2);
+    cuda_synchronize_stream(sub_stream_3);
+    cuda_synchronize_stream(sub_stream_4);
 
-    cudaStreamWaitEvent(stream->stream, event1, 0);
-    cudaStreamWaitEvent(stream->stream, event2, 0);
-    cudaStreamWaitEvent(stream->stream, event3, 0);
-    cudaStreamWaitEvent(stream->stream, event4, 0);
     //
     //    // left_shift_interesting_remainder2
     //    host_integer_radix_logical_scalar_shift_kb_inplace(

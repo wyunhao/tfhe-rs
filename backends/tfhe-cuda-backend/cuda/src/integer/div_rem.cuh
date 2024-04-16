@@ -40,6 +40,7 @@ template <typename Torus> struct ciphertext_list {
     radix_size_bytes = radix_size * sizeof(Torus);
     big_lwe_dimension = params.big_lwe_dimension;
     data = (Torus *)cuda_malloc_async(radix_size_bytes, stream);
+    len = max_blocks;
   }
 
   void clone_from(Torus *src, size_t start_block, size_t finish_block,
@@ -155,15 +156,14 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
   ciphertext_list<Torus> interesting_divisor(radix_params, num_blocks, stream);
   ciphertext_list<Torus> divisor_ms_blocks(radix_params, num_blocks, stream);
 
-  ciphertext_list<Torus> merged_interesting_remainder(radix_params, num_blocks,
-                                                      stream);
+  ciphertext_list<Torus> new_remainder(radix_params, num_blocks, stream);
+  ciphertext_list<Torus> subtraction_overflowed(radix_params, 1, stream);
 
-  ciphertext_list<Torus> cur_quotient(radix_params, num_blocks, stream);
-  ciphertext_list<Torus> overflowed(radix_params, 1, stream);
-
-  ciphertext_list<Torus> check_divisor_upper_blocks(radix_params, 1, stream);
-  ciphertext_list<Torus> compare_with_zero_equality(radix_params, num_blocks,
-                                                    stream);
+  ciphertext_list<Torus> tmp1(radix_params, num_blocks, stream);
+  ciphertext_list<Torus> at_least_one_upper_block_is_non_zero(radix_params, 1,
+                                                              stream);
+  ciphertext_list<Torus> cleaned_merged_interesting_remainder(
+      radix_params, num_blocks, stream);
 
   numerator_block_stack.clone_from(numerator, 0, num_blocks - 1, stream);
 
@@ -177,6 +177,8 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
   int_radix_lut<Torus> *masking_lut =
       new int_radix_lut<Torus>(stream, radix_params, 1, num_blocks, true);
   int_radix_lut<Torus> *masking_lut2 =
+      new int_radix_lut<Torus>(stream, radix_params, 1, num_blocks, true);
+  int_radix_lut<Torus> *message_extract_lut =
       new int_radix_lut<Torus>(stream, radix_params, 1, num_blocks, true);
 
   uint32_t numerator_block_stack_size = num_blocks;
@@ -214,7 +216,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     }
   }
 
-  int iter = 0; // debug
   for (int i = total_bits - 1; i >= 0; i--) {
     { // debug
       printf("cuda i = %u\n", i);
@@ -259,7 +260,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     // TODO following 3 apply_lookup_table can be called in one batch
 
     { // debug
-      //      printf("initialize mid buffers iter %u\n", iter);
       printf("cuda_last_non_trivial_block %u\n", last_non_trivial_block);
       printf("cuda_(msb_bit_set + 1) / num_bits_in_message %u\n",
              (msb_bit_set + 1) / num_bits_in_message);
@@ -272,7 +272,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
 
     auto trim_last_interesting_divisor_bits = [&](cuda_stream_t *stream) {
       if ((msb_bit_set + 1) % num_bits_in_message == 0) {
-        {   // debug
+        { // debug
           printf("cuda trim_last_interesting_divisor_bits dabrunda\n");
         }
         return;
@@ -311,15 +311,13 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
 
       // end of move in scratch
       { // debug
-       print_debug("masking_lut#1", masking_lut->lut,
+        print_debug("masking_lut#1", masking_lut->lut,
                     (radix_params.glwe_dimension + 1) *
-                                                           radix_params
-                            .polynomial_size);
+                        radix_params.polynomial_size);
       }
       integer_radix_apply_univariate_lookup_table_kb(
           stream, interesting_divisor.last_block(),
           interesting_divisor.last_block(), bsk, ksk, 1, masking_lut);
-
     }; // trim_last_interesting_divisor_bits
 
     auto trim_first_divisor_ms_bits = [&](cuda_stream_t *stream) {
@@ -357,7 +355,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       integer_radix_apply_univariate_lookup_table_kb(
           stream, divisor_ms_blocks.first_block(),
           divisor_ms_blocks.first_block(), bsk, ksk, 1, masking_lut2);
-
     }; // trim_first_divisor_ms_bits
 
     // This does
@@ -389,7 +386,8 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
         printf("interesting_remainder1.len: %u \n", interesting_remainder1.len);
       }
 
-      radix_blocks_rotate_left<<<interesting_remainder1.len, 256, 0, stream->stream>>>(
+      radix_blocks_rotate_left<<<interesting_remainder1.len, 256, 0,
+                                 stream->stream>>>(
           interesting_remainder1.data, interesting_remainder1.data, 1,
           interesting_remainder1.len, big_lwe_size);
 
@@ -409,34 +407,33 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
         }
         numerator_block_stack.push(numerator_block.first_block(), stream);
       }
-
-    };  // left_shift_interesting_remainder1
+    }; // left_shift_interesting_remainder1
 
     auto left_shift_interesting_remainder2 = [&](cuda_stream_t *stream) {
       host_integer_radix_logical_scalar_shift_kb_inplace(
           stream, interesting_remainder2.data, 1, mem_ptr->shift_mem, bsk, ksk,
           num_blocks);
-    };  // left_shift_interesting_remainder2
+    }; // left_shift_interesting_remainder2
 
-    #pragma omp parallel sections
+#pragma omp parallel sections
     {
-      #pragma omp section
+#pragma omp section
       {
         // interesting_divisor
         trim_last_interesting_divisor_bits(sub_stream_1);
       }
-      #pragma omp section
+#pragma omp section
       {
         // divisor_ms_blocks
         trim_first_divisor_ms_bits(sub_stream_2);
       }
-      #pragma omp section
+#pragma omp section
       {
         // interesting_remainder1
         // numerator_block_stack
         left_shift_interesting_remainder1(sub_stream_3);
       }
-      #pragma omp section
+#pragma omp section
       {
         // interesting_remainder2
         left_shift_interesting_remainder2(sub_stream_4);
@@ -460,55 +457,116 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     // if interesting_remainder1 == 0 -> interesting_remainder2 != 0
     // In practice interesting_remainder1 contains the numerator bit,
     // but in that position, interesting_remainder2 always has a 0
-    merged_interesting_remainder.clone_from(interesting_remainder1, 0,
-                                            interesting_remainder1.len - 1,
-                                            stream);
+    auto &merged_interesting_remainder = interesting_remainder1;
+
+    host_addition(stream, merged_interesting_remainder.data,
+                  merged_interesting_remainder.data,
+                  interesting_remainder2.data, radix_params.big_lwe_dimension,
+                  num_blocks);
 
     { // debug
-      merged_interesting_remainder.print_blocks_body
-          ("merged_interesting_remainder");
+      merged_interesting_remainder.print_blocks_body(
+          "merged_interesting_remainder_after_add");
     }
-    //
-    //    host_addition(stream, merged_interesting_remainder,
-    //                  merged_interesting_remainder, interesting_remainder2,
-    //                  radix_params.big_lwe_dimension, num_blocks);
-    //
-    //    // TODO there is a way to parallelize following 3 calls
-    //    // do_overflowing_sub
-    //    //    host_integer_overflowing_sub_kb(stream,
-    //    //                                    cur_quotient,
-    //    //                                    overflowed,
-    //    //                                    merged_interesting_remainder,
-    //    //                                    interesting_divisor,
-    //    //                                    bsk, ksk,
-    //    mem_ptr->overflow_sub_mem,
-    //    //                                    num_blocks);
-    //
-    //    // check_divisor_upper_blocks
-    //    auto trivial_blocks = divisor_ms_blocks;
-    //
-    //    if (ms_start_index >= num_blocks - 1) {
-    //      cuda_memset_async(check_divisor_upper_blocks, 0, big_lwe_size_bytes,
-    //                        stream);
-    //    } else {
-    //      host_compare_with_zero_equality(
-    //          stream, compare_with_zero_equality, trivial_blocks,
-    //          mem_ptr->comparison_buffer, bsk, ksk, num_blocks,
-    //          mem_ptr->comparison_buffer->eq_buffer->is_non_zero_lut);
-    //
-    //      is_at_least_one_comparisons_block_true(
-    //          stream, check_divisor_upper_blocks, compare_with_zero_equality,
-    //          mem_ptr->comparison_buffer, bsk, ksk, num_blocks);
-    //    }
-    //
-    //    // Creates a cleaned version (noise wise) of the merged remainder
-    //    // so that it can be safely used in bivariate PBSes
-    //
-    //    iter++; // debug
-    //    break;
+
+    assert(merged_interesting_remainder.len == interesting_divisor.len);
+
+    // `new_remainder` is not initialized yet, so need to set length
+    new_remainder.len = merged_interesting_remainder.len;
+    // fills:
+    //  `new_remainder` - radix ciphertext
+    //  `subtraction_overflowed` - single ciphertext
+    auto do_overflowing_sub = [&](cuda_stream_t *stream) {
+      host_integer_overflowing_sub_kb<Torus, params>(
+          stream, new_remainder.data, subtraction_overflowed.data,
+          merged_interesting_remainder.data, interesting_divisor.data, bsk, ksk,
+          mem_ptr->overflow_sub_mem, merged_interesting_remainder.len);
+    };
+
+    // fills:
+    //  `at_least_one_upper_block_is_non_zero` - single ciphertext
+    auto check_divisor_upper_blocks = [&](cuda_stream_t *stream) {
+      auto &trivial_blocks = divisor_ms_blocks;
+      if (trivial_blocks.is_empty()) {
+        cuda_memset_async(at_least_one_upper_block_is_non_zero.first_block(), 0,
+                          big_lwe_size_bytes, stream);
+      } else {
+        // We could call unchecked_scalar_ne
+        // But we are in the special case where scalar == 0
+        // So we can skip some stuff
+        host_compare_with_zero_equality(
+            stream, tmp1.data, trivial_blocks.data, mem_ptr->comparison_buffer,
+            bsk, ksk, num_blocks,
+            mem_ptr->comparison_buffer->eq_buffer->is_non_zero_lut);
+
+        is_at_least_one_comparisons_block_true(
+            stream, at_least_one_upper_block_is_non_zero.data, tmp1.data,
+            mem_ptr->comparison_buffer, bsk, ksk, num_blocks);
+      }
+    };
+
+    // after create_clean_version_of_merged_remainder
+    // `merged_interesting_remainder` will be reused as
+    // `cleaned_merged_interesting_remainder`
+    cleaned_merged_interesting_remainder.clone_from
+        (merged_interesting_remainder, 0, merged_interesting_remainder.len -
+                                              1, stream);
+
+    // Creates a cleaned version (noise wise) of the merged remainder
+    // so that it can be safely used in bivariate PBSes
+    // fills:
+    //  `cleaned_merged_interesting_remainder` - radix ciphertext
+    auto create_clean_version_of_merged_remainder = [&](cuda_stream_t *stream) {
+      auto lut_f_message_extract = [message_modulus](Torus x) -> Torus {
+        return x % message_modulus;
+      };
+      auto cur_lut = merge_overflow_flags_luts->get_lut(0);
+      generate_device_accumulator<Torus>(
+          stream, cur_lut, radix_params.glwe_dimension,
+          radix_params.polynomial_size, radix_params.message_modulus,
+          radix_params.carry_modulus, lut_f_message_extract);
+      integer_radix_apply_univariate_lookup_table_kb(
+          stream, cleaned_merged_interesting_remainder.data,
+          cleaned_merged_interesting_remainder.data, bsk, ksk,
+          cleaned_merged_interesting_remainder.len, message_extract_lut);
+    };
+
+    printf("new_remainder.len: %u\n", new_remainder.len);
+
+    // phase 2
+#pragma omp parallel sections
+    {
+#pragma omp section
+      {
+        // new_remainder
+        // subtraction_overflowed
+        do_overflowing_sub(sub_stream_1);
+      }
+#pragma omp section
+      {
+        // at_least_one_upper_block_is_non_zero
+        check_divisor_upper_blocks(sub_stream_2);
+      }
+#pragma omp section
+      {
+        // cleaned_merged_interesting_remainder
+        create_clean_version_of_merged_remainder(sub_stream_3);
+      }
+    }
+    cuda_synchronize_stream(sub_stream_1);
+    cuda_synchronize_stream(sub_stream_2);
+    cuda_synchronize_stream(sub_stream_3);
+
+    { // debug
+      printf("new_remainder.len: %u\n", new_remainder.len);
+      new_remainder.print_blocks_body("new_remainder");
+      subtraction_overflowed.print_blocks_body("subtraction_overflowed");
+    }
+
+
   }
 
-  cuda_memcpy_async_gpu_to_gpu(quotient, cur_quotient.data, radix_size_bytes,
+  cuda_memcpy_async_gpu_to_gpu(quotient, new_remainder.data, radix_size_bytes,
                                stream);
 }
 

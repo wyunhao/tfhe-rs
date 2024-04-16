@@ -250,7 +250,8 @@ impl ServerKey {
 
             let mut trim_last_interesting_divisor_bits = || {
                 if ((msb_bit_set + 1) % num_bits_in_message as usize) == 0 {
-                    {   // debug
+                    {
+                        // debug
                         println!("rust trim_last_interesting_divisor_bits dabrunda");
                     }
                     return;
@@ -362,7 +363,8 @@ impl ServerKey {
             ];
             tasks.into_par_iter().for_each(|task| task());
 
-            {   // debug
+            {
+                // debug
                 println!("rust chunk #1-----------------");
 
                 for block in &interesting_divisor.blocks {
@@ -374,7 +376,10 @@ impl ServerKey {
                 }
 
                 for block in &interesting_remainder1.blocks {
-                    println!("rust_interesting_remainder1: {:?}", block.ct.get_body().data);
+                    println!(
+                        "rust_interesting_remainder1: {:?}",
+                        block.ct.get_body().data
+                    );
                 }
 
                 for block in &numerator_block_stack {
@@ -382,10 +387,12 @@ impl ServerKey {
                 }
 
                 for block in &interesting_remainder2.blocks {
-                    println!("rust_interesting_remainder2: {:?}", block.ct.get_body().data);
+                    println!(
+                        "rust_interesting_remainder2: {:?}",
+                        block.ct.get_body().data
+                    );
                 }
             }
-
 
             // if interesting_remainder1 != 0 -> interesting_remainder2 == 0
             // if interesting_remainder1 == 0 -> interesting_remainder2 != 0
@@ -394,6 +401,15 @@ impl ServerKey {
             let mut merged_interesting_remainder = interesting_remainder1;
             self.unchecked_add_assign(&mut merged_interesting_remainder, &interesting_remainder2);
 
+            {
+                // debug
+                for block in &merged_interesting_remainder.blocks {
+                    println!(
+                        "rust_merged_interesting_remainder_after_add: {:?}",
+                        block.ct.get_body().data
+                    );
+                }
+            }
             let do_overflowing_sub = || {
                 self.unchecked_unsigned_overflowing_sub_parallelized(
                     &merged_interesting_remainder,
@@ -442,6 +458,19 @@ impl ServerKey {
             });
             // explicit drop, so that we do not use it by mistake
             drop(merged_interesting_remainder);
+            {   // debug
+                for block in &new_remainder.blocks {
+                    println!(
+                        "new_remainder: {:?}",
+                        block.ct.get_body().data
+                    );
+                }
+
+                println!(
+                    "subtraction_overflowed: {:?}",
+                    subtraction_overflowed.0.ct.get_body().data);
+
+            }
 
             let overflow_sum = self.key.unchecked_add(
                 subtraction_overflowed.as_ref(),

@@ -19,9 +19,7 @@
 #include <string>
 #include <vector>
 
-int ceil_div(int a, int b) {
-  return (a + b - 1) / b;
-}
+int ceil_div(int a, int b) { return (a + b - 1) / b; }
 template <typename Torus> struct ciphertext_list {
   Torus *data;
   size_t max_blocks;
@@ -46,6 +44,16 @@ template <typename Torus> struct ciphertext_list {
     len = max_blocks;
   }
 
+  void copy_from(Torus *src, size_t start_block, size_t finish_block,
+                 cuda_stream_t *stream) {
+    cuda_memcpy_async_gpu_to_gpu(data, &src[start_block * big_lwe_size],
+                                 len * big_lwe_size_bytes, stream);
+  }
+  void copy_from(ciphertext_list src, size_t start_block, size_t finish_block,
+                 cuda_stream_t *stream) {
+    copy_from(src.data, start_block, finish_block, stream);
+  }
+
   void clone_from(Torus *src, size_t start_block, size_t finish_block,
                   cuda_stream_t *stream) {
     len = finish_block - start_block + 1;
@@ -68,7 +76,10 @@ template <typename Torus> struct ciphertext_list {
 
   Torus *last_block() { return &data[(len - 1) * big_lwe_size]; }
   Torus *first_block() { return data; }
-
+  Torus *get_block(size_t index) {
+    assert(index < len);
+    return &data[index * big_lwe_size];
+  }
   bool is_empty() { return len == 0; }
 
   void pop() {
@@ -102,6 +113,19 @@ template <typename Torus> struct ciphertext_list {
     cuda_memcpy_async_gpu_to_gpu(&data[offset], ciphertext_block,
                                  big_lwe_size_bytes, stream);
     len++;
+  }
+
+  void fill_with_same_ciphertext(Torus *ciphertext, size_t number_of_blocks,
+                                 cuda_stream_t *stream) {
+    assert(number_of_blocks <= max_blocks);
+
+    for (size_t i = 0; i < number_of_blocks; i++) {
+      Torus *dest = &data[i * big_lwe_size];
+      cuda_memcpy_async_gpu_to_gpu(dest, ciphertext, big_lwe_size_bytes,
+                                   stream);
+    }
+
+    len = number_of_blocks;
   }
 
   void print_blocks_body(const char *name) {
@@ -162,6 +186,9 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
 
   ciphertext_list<Torus> new_remainder(radix_params, num_blocks, stream);
   ciphertext_list<Torus> subtraction_overflowed(radix_params, 1, stream);
+  ciphertext_list<Torus> did_not_overflow(radix_params, 1, stream);
+  ciphertext_list<Torus> overflow_sum(radix_params, 1, stream);
+  ciphertext_list<Torus> overflow_sum_radix(radix_params, num_blocks, stream);
 
   ciphertext_list<Torus> tmp1(radix_params, num_blocks, stream);
   ciphertext_list<Torus> at_least_one_upper_block_is_non_zero(radix_params, 1,
@@ -175,14 +202,17 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
   remainder2.assign_zero(0, num_blocks - 1, stream);
 
   // luts
-  int_radix_lut<Torus> *merge_overflow_flags_luts =
-      new int_radix_lut<Torus>(stream, radix_params, num_bits_in_message,
-                               num_bits_in_message * num_blocks, true);
+  int_radix_lut<Torus> **merge_overflow_flags_luts =
+      new int_radix_lut<Torus> *[num_bits_in_message];
   int_radix_lut<Torus> *masking_lut =
       new int_radix_lut<Torus>(stream, radix_params, 1, num_blocks, true);
   int_radix_lut<Torus> *masking_lut2 =
       new int_radix_lut<Torus>(stream, radix_params, 1, num_blocks, true);
   int_radix_lut<Torus> *message_extract_lut =
+      new int_radix_lut<Torus>(stream, radix_params, 1, num_blocks, true);
+  int_radix_lut<Torus> *zero_out_if_overflow_did_not_happen =
+      new int_radix_lut<Torus>(stream, radix_params, 1, num_blocks, true);
+  int_radix_lut<Torus> *zero_out_if_overflow_happened =
       new int_radix_lut<Torus>(stream, radix_params, 1, num_blocks, true);
 
   uint32_t numerator_block_stack_size = num_blocks;
@@ -191,9 +221,12 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     auto lut_f_bit = [i](Torus x, Torus y) -> Torus {
       return (x == 0 && y == 0) << i;
     };
-    auto cur_lut = merge_overflow_flags_luts->get_lut(i);
+
+    merge_overflow_flags_luts[i] =
+        new int_radix_lut<Torus>(stream, radix_params, 1, num_blocks, true);
+
     generate_device_accumulator_bivariate<Torus>(
-        stream, cur_lut, radix_params.glwe_dimension,
+        stream, merge_overflow_flags_luts[i]->lut, radix_params.glwe_dimension,
         radix_params.polynomial_size, radix_params.message_modulus,
         radix_params.carry_modulus, lut_f_bit);
   }
@@ -203,7 +236,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
   { // debug
 
     for (int i = 0; i < num_bits_in_message; i++) {
-      auto cur_lut = merge_overflow_flags_luts->get_lut(i);
+      auto cur_lut = merge_overflow_flags_luts[i]->get_lut(0);
       print_debug("cuda_merge_lut:", cur_lut,
                   radix_params.polynomial_size *
                       (radix_params.glwe_dimension + 1));
@@ -471,9 +504,9 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     // after create_clean_version_of_merged_remainder
     // `merged_interesting_remainder` will be reused as
     // `cleaned_merged_interesting_remainder`
-    cleaned_merged_interesting_remainder.clone_from
-        (merged_interesting_remainder, 0, merged_interesting_remainder.len -
-                                              1, stream);
+    cleaned_merged_interesting_remainder.clone_from(
+        merged_interesting_remainder, 0, merged_interesting_remainder.len - 1,
+        stream);
 
     { // debug
       merged_interesting_remainder.print_blocks_body(
@@ -511,11 +544,10 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
             stream, tmp1.data, trivial_blocks.data, mem_ptr->comparison_buffer,
             bsk, ksk, trivial_blocks.len,
             mem_ptr->comparison_buffer->eq_buffer->is_non_zero_lut);
-        tmp1.len = ceil_div(trivial_blocks.len, message_modulus * carry_modulus - 1);
+        tmp1.len =
+            ceil_div(trivial_blocks.len, message_modulus * carry_modulus - 1);
 
-        {
-          tmp1.print_blocks_body("tmp1");
-        }
+        { tmp1.print_blocks_body("tmp1"); }
         is_at_least_one_comparisons_block_true(
             stream, at_least_one_upper_block_is_non_zero.data, tmp1.data,
             mem_ptr->comparison_buffer, bsk, ksk, tmp1.len);
@@ -571,13 +603,118 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       printf("new_remainder.len: %u\n", new_remainder.len);
       new_remainder.print_blocks_body("new_remainder");
       subtraction_overflowed.print_blocks_body("subtraction_overflowed");
-      at_least_one_upper_block_is_non_zero.print_blocks_body
-          ("at_least_one_upper_block_is_non_zero");
-      cleaned_merged_interesting_remainder.print_blocks_body
-          ("cleaned_merged_interesting_remainder");
+      at_least_one_upper_block_is_non_zero.print_blocks_body(
+          "at_least_one_upper_block_is_non_zero");
+      cleaned_merged_interesting_remainder.print_blocks_body(
+          "cleaned_merged_interesting_remainder");
     }
 
+    // phase 3
 
+    // Give name to closures to improve readability
+    auto overflow_happened = [](uint64_t overflow_sum) {
+      return overflow_sum != 0;
+    };
+    auto overflow_did_not_happen = [&overflow_happened](uint64_t overflow_sum) {
+      return !overflow_happened(overflow_sum);
+    };
+
+    host_addition(stream, overflow_sum.data, subtraction_overflowed.data,
+                  at_least_one_upper_block_is_non_zero.data,
+                  radix_params.big_lwe_dimension, 1);
+
+    { // debug
+      overflow_sum.print_blocks_body("overflow_sum");
+    }
+
+    int factor = (i) ? 3 : 2;
+    overflow_sum_radix.fill_with_same_ciphertext(
+        overflow_sum.first_block(), cleaned_merged_interesting_remainder.len,
+        stream);
+
+    auto conditionally_zero_out_merged_interesting_remainder =
+        [&](cuda_stream_t *stream) {
+          auto cur_lut_f = [&](Torus block, Torus overflow_sum) -> Torus {
+            if (overflow_did_not_happen(overflow_sum)) {
+              return 0;
+            } else {
+              return block;
+            }
+          };
+          auto cur_lut = zero_out_if_overflow_did_not_happen->lut;
+          generate_device_accumulator_bivariate_with_factor<Torus>(
+              stream, cur_lut, radix_params.glwe_dimension,
+              radix_params.polynomial_size, radix_params.message_modulus,
+              radix_params.carry_modulus, cur_lut_f, factor);
+
+          integer_radix_apply_bivariate_lookup_table_kb<Torus>(
+              stream, cleaned_merged_interesting_remainder.data,
+              cleaned_merged_interesting_remainder.data,
+              overflow_sum_radix.data, bsk, ksk,
+              cleaned_merged_interesting_remainder.len,
+              zero_out_if_overflow_did_not_happen);
+        };
+
+    auto conditionally_zero_out_merged_new_remainder =
+        [&](cuda_stream_t *stream) {
+          auto cur_lut_f = [&](Torus block, Torus overflow_sum) -> Torus {
+            if (overflow_happened(overflow_sum)) {
+              return 0;
+            } else {
+              return block;
+            }
+          };
+          auto cur_lut = zero_out_if_overflow_happened->lut;
+          generate_device_accumulator_bivariate_with_factor<Torus>(
+              stream, cur_lut, radix_params.glwe_dimension,
+              radix_params.polynomial_size, radix_params.message_modulus,
+              radix_params.carry_modulus, cur_lut_f, factor);
+
+          integer_radix_apply_bivariate_lookup_table_kb<Torus>(
+              stream, new_remainder.data, new_remainder.data,
+              overflow_sum_radix.data, bsk, ksk, new_remainder.len,
+              zero_out_if_overflow_happened);
+        };
+
+    auto set_quotient_bit = [&](cuda_stream_t *stream) {
+      integer_radix_apply_bivariate_lookup_table_kb<Torus>(
+          stream, did_not_overflow.data, subtraction_overflowed.data,
+          at_least_one_upper_block_is_non_zero.data, bsk, ksk, 1,
+          merge_overflow_flags_luts[pos_in_block]);
+
+      host_addition(stream, &quotient[block_of_bit * big_lwe_size],
+                    &quotient[block_of_bit * big_lwe_size],
+                    did_not_overflow.data, radix_params.big_lwe_dimension, 1);
+    };
+
+#pragma omp parallel sections
+    {
+#pragma omp section
+      {
+        // cleaned_merged_interesting_remainder
+        conditionally_zero_out_merged_interesting_remainder(sub_stream_1);
+      }
+#pragma omp section
+      {
+        // new_remainder
+        conditionally_zero_out_merged_new_remainder(sub_stream_2);
+      }
+#pragma omp section
+      {
+        // quotient
+        set_quotient_bit(sub_stream_3);
+      }
+    }
+    cuda_synchronize_stream(sub_stream_1);
+    cuda_synchronize_stream(sub_stream_2);
+    cuda_synchronize_stream(sub_stream_3);
+
+    assert(first_trivial_block - 1 == cleaned_merged_interesting_remainder.len);
+    assert(first_trivial_block - 1 == new_remainder.len);
+
+    remainder1.copy_from(cleaned_merged_interesting_remainder, 0,
+                         first_trivial_block - 1, stream);
+    remainder2.copy_from(new_remainder, 0, first_trivial_block - 1, stream);
   }
 
   cuda_memcpy_async_gpu_to_gpu(quotient, new_remainder.data, radix_size_bytes,

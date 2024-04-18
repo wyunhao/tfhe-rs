@@ -235,6 +235,24 @@ void generate_lookup_table_bivariate(Torus *acc, uint32_t glwe_dimension,
                                message_modulus, carry_modulus, wrapped_f);
 }
 
+template <typename Torus>
+void generate_lookup_table_bivariate_with_factor(
+    Torus *acc, uint32_t glwe_dimension, uint32_t polynomial_size,
+    uint32_t message_modulus, uint32_t carry_modulus,
+    std::function<Torus(Torus, Torus)> f, int factor) {
+
+  Torus factor_u64 = factor;
+  auto wrapped_f = [factor_u64, message_modulus, f](Torus input) -> Torus {
+    Torus lhs = (input / factor_u64) % message_modulus;
+    Torus rhs = (input % factor_u64) % message_modulus;
+
+    return f(lhs, rhs);
+  };
+
+  generate_lookup_table<Torus>(acc, glwe_dimension, polynomial_size,
+                               message_modulus, carry_modulus, wrapped_f);
+}
+
 /*
  *  generate bivariate accumulator for device pointer
  *    v_stream - cuda stream
@@ -266,7 +284,38 @@ void generate_device_accumulator_bivariate(
 }
 
 /*
- *  generate bivariate accumulator for device pointer
+ *  generate bivariate accumulator with factor scaling for device pointer
+ *    v_stream - cuda stream
+ *    acc - device pointer for bivariate accumulator
+ *    ...
+ *    f - wrapping function with two Torus inputs
+ */
+template <typename Torus>
+void generate_device_accumulator_bivariate_with_factor(
+    cuda_stream_t *stream, Torus *acc_bivariate, uint32_t glwe_dimension,
+    uint32_t polynomial_size, uint32_t message_modulus, uint32_t carry_modulus,
+    std::function<Torus(Torus, Torus)> f, int factor) {
+
+  // host lut
+  Torus *h_lut =
+      (Torus *)malloc((glwe_dimension + 1) * polynomial_size * sizeof(Torus));
+
+  // fill bivariate accumulator
+  generate_lookup_table_bivariate_with_factor<Torus>(
+      h_lut, glwe_dimension, polynomial_size, message_modulus, carry_modulus, f,
+      factor);
+
+  // copy host lut and lut_indexes to device
+  cuda_memcpy_async_to_gpu(
+      acc_bivariate, h_lut,
+      (glwe_dimension + 1) * polynomial_size * sizeof(Torus), stream);
+
+  // Release memory when possible
+  cuda_stream_add_callback(stream, host_free_on_stream_callback, h_lut);
+}
+
+/*
+ *  generate accumulator for device pointer
  *    v_stream - cuda stream
  *    acc - device pointer for accumulator
  *    ...

@@ -433,10 +433,7 @@ impl ServerKey {
                     {
                         // debug
                         for block in &tmp {
-                            println!(
-                                "rust_tmp: {:?}",
-                                block.ct.get_body().data
-                            );
+                            println!("rust_tmp: {:?}", block.ct.get_body().data);
                         }
                     }
 
@@ -470,21 +467,21 @@ impl ServerKey {
             });
             // explicit drop, so that we do not use it by mistake
             drop(merged_interesting_remainder);
-            {   // debug
+            {
+                // debug
                 for block in &new_remainder.blocks {
-                    println!(
-                        "new_remainder: {:?}",
-                        block.ct.get_body().data
-                    );
+                    println!("new_remainder: {:?}", block.ct.get_body().data);
                 }
 
                 println!(
                     "subtraction_overflowed: {:?}",
-                    subtraction_overflowed.0.ct.get_body().data);
+                    subtraction_overflowed.0.ct.get_body().data
+                );
 
                 println!(
                     "at_least_one_upper_block_is_non_zero: {:?}",
-                    at_least_one_upper_block_is_non_zero.ct.get_body().data);
+                    at_least_one_upper_block_is_non_zero.ct.get_body().data
+                );
 
                 for block in &cleaned_merged_interesting_remainder.blocks {
                     println!(
@@ -502,10 +499,16 @@ impl ServerKey {
             let overflow_happened = |overflow_sum: u64| overflow_sum != 0;
             let overflow_did_not_happen = |overflow_sum: u64| !overflow_happened(overflow_sum);
 
+            {
+                // debug
+                println!("overflow_sum: {:?}", overflow_sum.ct.get_body().data);
+            }
+
             // Here, we will do what zero_out_if does, but to stay within noise constraints,
             // we do it by hand so that we apply the factor (shift) to the correct block
             assert!(overflow_sum.degree.get() <= 2); // at_least_one_upper_block_is_non_zero maybe be a trivial 0
             let factor = MessageModulus(overflow_sum.degree.get() + 1);
+            println!("factor: {:?}", factor);
             let mut conditionally_zero_out_merged_interesting_remainder = || {
                 let zero_out_if_overflow_did_not_happen =
                     self.key.generate_lookup_table_bivariate_with_factor(

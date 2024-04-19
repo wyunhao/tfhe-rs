@@ -717,8 +717,24 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     remainder2.copy_from(new_remainder, 0, first_trivial_block - 1, stream);
   }
 
-  cuda_memcpy_async_gpu_to_gpu(quotient, new_remainder.data, radix_size_bytes,
-                               stream);
+  assert(remainder1.len == remainder2.len);
+
+  // Clean the quotient and remainder
+  // as even though they have no carries, they are not at nominal noise level
+  host_addition(stream, remainder,
+                remainder1.data,
+                remainder2.data, radix_params.big_lwe_dimension, remainder1
+                                                                     .len);
+  integer_radix_apply_univariate_lookup_table_kb(
+      stream, remainder,
+      remainder, bsk, ksk,
+      num_blocks, message_extract_lut);
+
+  integer_radix_apply_univariate_lookup_table_kb(
+      stream, quotient,
+      quotient, bsk, ksk,
+      num_blocks, message_extract_lut);
+
 }
 
 #endif // TFHE_RS_DIV_REM_CUH

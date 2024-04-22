@@ -46,8 +46,9 @@ template <typename Torus> struct ciphertext_list {
 
   void copy_from(Torus *src, size_t start_block, size_t finish_block,
                  cuda_stream_t *stream) {
+    size_t tmp_len = finish_block - start_block + 1;
     cuda_memcpy_async_gpu_to_gpu(data, &src[start_block * big_lwe_size],
-                                 len * big_lwe_size_bytes, stream);
+                                 tmp_len * big_lwe_size_bytes, stream);
   }
   void copy_from(ciphertext_list src, size_t start_block, size_t finish_block,
                  cuda_stream_t *stream) {
@@ -253,10 +254,15 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     }
   }
 
+  cuda_memset_async(quotient, 0,
+                    big_lwe_size_bytes * num_blocks, stream);
+
+
   for (int i = total_bits - 1; i >= 0; i--) {
     { // debug
       printf("cuda i = %u\n", i);
     }
+    printf("cuda_phase1\n");
     uint32_t block_of_bit = i / num_bits_in_message;
     uint32_t pos_in_block = i % num_bits_in_message;
 
@@ -309,9 +315,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
 
     auto trim_last_interesting_divisor_bits = [&](cuda_stream_t *stream) {
       if ((msb_bit_set + 1) % num_bits_in_message == 0) {
-        { // debug
-          printf("cuda trim_last_interesting_divisor_bits dabrunda\n");
-        }
         return;
       }
       // The last block of the interesting part of the remainder
@@ -335,7 +338,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       // Shift the mask so that we will only keep bits we should
       uint32_t shifted_mask = full_message_mask >> shift_amount;
 
-      printf("shifted_mask: %u \n", shifted_mask);
       // TODO move in scratch
       std::function<Torus(Torus)> lut_f_masking;
       lut_f_masking = [shifted_mask](Torus x) -> Torus {
@@ -347,11 +349,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
           radix_params.carry_modulus, lut_f_masking);
 
       // end of move in scratch
-      { // debug
-        print_debug("masking_lut#1", masking_lut->lut,
-                    (radix_params.glwe_dimension + 1) *
-                        radix_params.polynomial_size);
-      }
       integer_radix_apply_univariate_lookup_table_kb(
           stream, interesting_divisor.last_block(),
           interesting_divisor.last_block(), bsk, ksk, 1, masking_lut);
@@ -407,48 +404,36 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       numerator_block.clone_from(numerator_block_stack,
                                  numerator_block_stack.len - 1,
                                  numerator_block_stack.len - 1, stream);
-
       numerator_block_stack.pop();
 
       interesting_remainder1.insert(0, numerator_block.first_block(), stream);
-      { // debug
-        numerator_block.print_blocks_body("numerator_block");
-        interesting_remainder1.print_blocks_body("interesting_remainder1");
-      }
+
       host_integer_radix_logical_scalar_shift_kb_inplace(
           stream, interesting_remainder1.data, 1, mem_ptr->shift_mem, bsk, ksk,
           interesting_remainder1.len);
-      { // debug
-        interesting_remainder1.print_blocks_body("interesting_remainder1");
-        printf("interesting_remainder1.len: %u \n", interesting_remainder1.len);
-      }
 
       radix_blocks_rotate_left<<<interesting_remainder1.len, 256, 0,
                                  stream->stream>>>(
           interesting_remainder1.data, interesting_remainder1.data, 1,
           interesting_remainder1.len, big_lwe_size);
 
-      { // debug
-        interesting_remainder1.print_blocks_body("interesting_remainder1");
-      }
+
       numerator_block.clone_from(interesting_remainder1,
                                  interesting_remainder1.len - 1,
                                  interesting_remainder1.len - 1, stream);
+
       interesting_remainder1.pop();
 
       if (pos_in_block != 0) {
         // We have not yet extracted all the bits from this numerator
         // so, we put it back on the front so that it gets taken next iteration
-        { // debug
-          numerator_block.print_blocks_body("numerator_block");
-        }
         numerator_block_stack.push(numerator_block.first_block(), stream);
       }
     }; // left_shift_interesting_remainder1
 
     auto left_shift_interesting_remainder2 = [&](cuda_stream_t *stream) {
       host_integer_radix_logical_scalar_shift_kb_inplace(
-          stream, interesting_remainder2.data, 1, mem_ptr->shift_mem, bsk, ksk,
+          stream, interesting_remainder2.data, 1, mem_ptr->shift_mem2, bsk, ksk,
           num_blocks);
     }; // left_shift_interesting_remainder2
 
@@ -482,13 +467,15 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     cuda_synchronize_stream(sub_stream_4);
 
     { // debug
-      printf("cuda chunk #1-----------------\n");
+
+        printf("cuda_phase1_output\n");
       interesting_divisor.print_blocks_body("cuda_interesting_divisor");
       divisor_ms_blocks.print_blocks_body("cuda_divisor_ms_blocks");
       interesting_remainder1.print_blocks_body("cuda_interesting_remainder1");
       numerator_block_stack.print_blocks_body("cuda_numerator_block_stack");
       interesting_remainder2.print_blocks_body("cuda_interesting_remainder2");
     }
+//    return;
 
     // if interesting_remainder1 != 0 -> interesting_remainder2 == 0
     // if interesting_remainder1 == 0 -> interesting_remainder2 != 0
@@ -510,13 +497,15 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
 
     { // debug
       merged_interesting_remainder.print_blocks_body(
-          "merged_interesting_remainder_after_add");
+          "cuda_merged_interesting_remainder_after_add");
     }
 
     assert(merged_interesting_remainder.len == interesting_divisor.len);
 
     // `new_remainder` is not initialized yet, so need to set length
     new_remainder.len = merged_interesting_remainder.len;
+
+    printf("cuda_phase2\n");
     // fills:
     //  `new_remainder` - radix ciphertext
     //  `subtraction_overflowed` - single ciphertext
@@ -536,7 +525,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
                           big_lwe_size_bytes, stream);
       } else {
 
-        printf("trivial_blocks.len: %u\n", trivial_blocks.len); // debug
         // We could call unchecked_scalar_ne
         // But we are in the special case where scalar == 0
         // So we can skip some stuff
@@ -547,7 +535,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
         tmp1.len =
             ceil_div(trivial_blocks.len, message_modulus * carry_modulus - 1);
 
-        { tmp1.print_blocks_body("tmp1"); }
         is_at_least_one_comparisons_block_true(
             stream, at_least_one_upper_block_is_non_zero.data, tmp1.data,
             mem_ptr->comparison_buffer, bsk, ksk, tmp1.len);
@@ -572,8 +559,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
           cleaned_merged_interesting_remainder.data, bsk, ksk,
           cleaned_merged_interesting_remainder.len, message_extract_lut);
     };
-
-    printf("new_remainder.len: %u\n", new_remainder.len);
 
     // phase 2
 #pragma omp parallel sections
@@ -600,7 +585,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     cuda_synchronize_stream(sub_stream_3);
 
     { // debug
-      printf("new_remainder.len: %u\n", new_remainder.len);
+      printf("cuda_phase2_output\n");
       new_remainder.print_blocks_body("new_remainder");
       subtraction_overflowed.print_blocks_body("subtraction_overflowed");
       at_least_one_upper_block_is_non_zero.print_blocks_body(
@@ -608,8 +593,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       cleaned_merged_interesting_remainder.print_blocks_body(
           "cleaned_merged_interesting_remainder");
     }
-
-    // phase 3
 
     // Give name to closures to improve readability
     auto overflow_happened = [](uint64_t overflow_sum) {
@@ -631,6 +614,13 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     overflow_sum_radix.fill_with_same_ciphertext(
         overflow_sum.first_block(), cleaned_merged_interesting_remainder.len,
         stream);
+
+    overflow_sum_radix.print_blocks_body("overflow_sum_radix");
+
+    // phase 3
+
+    printf("cuda_phase3\n");
+
 
     auto conditionally_zero_out_merged_interesting_remainder =
         [&](cuda_stream_t *stream) {
@@ -669,6 +659,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
               stream, cur_lut, radix_params.glwe_dimension,
               radix_params.polynomial_size, radix_params.message_modulus,
               radix_params.carry_modulus, cur_lut_f, factor);
+
 
           integer_radix_apply_bivariate_lookup_table_kb<Torus>(
               stream, new_remainder.data, new_remainder.data,
@@ -709,12 +700,63 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     cuda_synchronize_stream(sub_stream_2);
     cuda_synchronize_stream(sub_stream_3);
 
+
+    { // debug
+
+      printf("cuda_phase3_output\n");
+//      print_debug("zero_out_if_overflow_did_not_happen",
+//                  zero_out_if_overflow_did_not_happen->lut, radix_params
+//                                                                 .polynomial_size *
+//                                                                      (radix_params.glwe_dimension + 1));
+
+      cleaned_merged_interesting_remainder.print_blocks_body
+    ("cuda_cleaned_merged_interesting_remainder");
+
+//      print_debug("zero_out_if_overflow_happened",
+//                  zero_out_if_overflow_happened->lut, radix_params
+//                                                           .polynomial_size *
+//                                                                (radix_params.glwe_dimension + 1));
+//      printf("new_remainder.len: %u\n", new_remainder.len);
+
+      new_remainder.print_blocks_body("cuda_new_remainder");
+
+//      printf("pos_in_block: %u:\n", pos_in_block);
+//      print_debug("merge_overflow_flags_luts[pos_in_block]",
+//                  merge_overflow_flags_luts[pos_in_block]->lut, radix_params
+//                                                              .polynomial_size *
+//                                                          (radix_params.glwe_dimension + 1));
+
+      for (int b = 0; b < num_blocks; b++) {
+        print_debug("quotient", &quotient[b * big_lwe_size + big_lwe_size - 1],
+                    1);
+      }
+
+    }
+
+    // phase 4
+    remainder1.print_blocks_body("cuda_remainder1_before_cooy");
+    remainder2.print_blocks_body("cuda_remainder2_before_copy");
+
+    printf("cuda_phase4\n");
     assert(first_trivial_block - 1 == cleaned_merged_interesting_remainder.len);
     assert(first_trivial_block - 1 == new_remainder.len);
+
+    printf("first_trivial_block: %u\n", first_trivial_block);
+    printf("remainder1.len: %u\n", remainder1.len);
+    printf("remainder2.len: %u\n", remainder2.len);
+    printf("cleaned_merged_interesting_remainder.len: %u\n", cleaned_merged_interesting_remainder.len);
+    printf("new_remainder.len: %u\n", new_remainder.len);
 
     remainder1.copy_from(cleaned_merged_interesting_remainder, 0,
                          first_trivial_block - 1, stream);
     remainder2.copy_from(new_remainder, 0, first_trivial_block - 1, stream);
+
+    { // debug
+      printf("cuda_phase4_output\n");
+      remainder1.print_blocks_body("cuda_remainder1");
+      remainder2.print_blocks_body("cuda_remainder2");
+
+    }
   }
 
   assert(remainder1.len == remainder2.len);

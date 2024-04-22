@@ -183,6 +183,7 @@ impl ServerKey {
                 // debug
                 println!("i = {}", i);
             }
+            println!("rust_phase1");
             let block_of_bit = i / num_bits_in_message as usize;
             let pos_in_block = i % num_bits_in_message as usize;
 
@@ -196,14 +197,6 @@ impl ServerKey {
             // This number is in range 1..=num_bocks -1
             let first_trivial_block = last_non_trivial_block + 1;
 
-            {
-                // debug
-                println!("last_non_trivial_block: {:?}", last_non_trivial_block);
-                println!(
-                    "(msb_bit_set + 1) / num_bits_in_message: {:?}",
-                    ((msb_bit_set + 1) / num_bits_in_message as usize)
-                );
-            }
             // All blocks starting from the first_trivial_block are known to be trivial
             // So we can avoid work.
             // Note that, these are always non-empty (i.e. there is always at least one non trivial
@@ -220,6 +213,13 @@ impl ServerKey {
 
             {
                 //debug
+                // debug
+                println!("last_non_trivial_block: {:?}", last_non_trivial_block);
+                println!(
+                    "(msb_bit_set + 1) / num_bits_in_message: {:?}",
+                    ((msb_bit_set + 1) / num_bits_in_message as usize)
+                );
+
                 for block in &interesting_remainder1.blocks {
                     println!(
                         "rust_interesting_remainder1: {:?}",
@@ -250,10 +250,6 @@ impl ServerKey {
 
             let mut trim_last_interesting_divisor_bits = || {
                 if ((msb_bit_set + 1) % num_bits_in_message as usize) == 0 {
-                    {
-                        // debug
-                        println!("rust trim_last_interesting_divisor_bits dabrunda");
-                    }
                     return;
                 }
                 // The last block of the interesting part of the remainder
@@ -273,9 +269,7 @@ impl ServerKey {
                 // Shift the mask so that we will only keep bits we should
                 let shifted_mask = full_message_mask >> shift_amount;
 
-                println!("shifted_mask: {:?}", shifted_mask);
                 let masking_lut = self.key.generate_lookup_table(|x| x & shifted_mask);
-                println!("rust masking_lut #1 : {:?}", masking_lut.acc);
                 self.key.apply_lookup_table_assign(
                     interesting_divisor.blocks.last_mut().unwrap(),
                     &masking_lut,
@@ -365,7 +359,7 @@ impl ServerKey {
 
             {
                 // debug
-                println!("rust chunk #1-----------------");
+                println!("rust_phase1_output");
 
                 for block in &interesting_divisor.blocks {
                     println!("rust_interesting_divisor: {:?}", block.ct.get_body().data);
@@ -410,6 +404,8 @@ impl ServerKey {
                     );
                 }
             }
+
+            println!("rust_phase2");
             let do_overflowing_sub = || {
                 self.unchecked_unsigned_overflowing_sub_parallelized(
                     &merged_interesting_remainder,
@@ -426,16 +422,8 @@ impl ServerKey {
                     // We could call unchecked_scalar_ne_parallelized
                     // But we are in the special case where scalar == 0
                     // So we can skip some stuff
-                    println!("rust_trivial_blocks.len: {:?}", trivial_blocks.len());
                     let tmp = self
                         .compare_blocks_with_zero(trivial_blocks, ZeroComparisonType::Difference);
-
-                    {
-                        // debug
-                        for block in &tmp {
-                            println!("rust_tmp: {:?}", block.ct.get_body().data);
-                        }
-                    }
 
                     self.is_at_least_one_comparisons_block_true(tmp)
                 }
@@ -469,6 +457,8 @@ impl ServerKey {
             drop(merged_interesting_remainder);
             {
                 // debug
+                println!("rust_phase2_output");
+
                 for block in &new_remainder.blocks {
                     println!("new_remainder: {:?}", block.ct.get_body().data);
                 }
@@ -572,6 +562,33 @@ impl ServerKey {
             ];
             tasks.into_par_iter().for_each(|task| task());
 
+            {   // debug
+                println!("rust_phase3_output");
+                for block in &cleaned_merged_interesting_remainder.blocks {
+                    println!(
+                        "rust_cleaned_merged_interesting_remainder: {:?}",
+                        block.ct.get_body().data
+                    );
+                }
+
+                for block in &new_remainder.blocks {
+                    println!(
+                        "rust_new_remainder: {:?}",
+                        block.ct.get_body().data
+                    );
+                }
+
+                for block in &quotient.blocks {
+                    println!(
+                        "quotient: {:?}",
+                        block.ct.get_body().data
+                    );
+                }
+            }
+
+
+            // phase 4
+            println!("rust_phase4");
             assert_eq!(
                 remainder1.blocks[..first_trivial_block].len(),
                 cleaned_merged_interesting_remainder.blocks.len()
@@ -592,6 +609,24 @@ impl ServerKey {
                 .for_each(|(remainder_block, new_value)| {
                     remainder_block.clone_from(new_value);
                 });
+
+            { // debug
+                println!("rust_phase4");
+                for block in &remainder1.blocks {
+                    println!(
+                        "remainder1: {:?}",
+                        block.ct.get_body().data
+                    );
+                }
+                for block in &remainder2.blocks {
+                    println!(
+                        "remainder2: {:?}",
+                        block.ct.get_body().data
+                    );
+                }
+
+            }
+
         }
 
         // Clean the quotient and remainder

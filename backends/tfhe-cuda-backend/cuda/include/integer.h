@@ -2154,12 +2154,16 @@ template <typename Torus> struct int_div_rem_memory {
   int_radix_params params;
   bool mem_reuse = false;
   int_logical_scalar_shift_buffer<Torus> *shift_mem;
+  int_logical_scalar_shift_buffer<Torus> *shift_mem2;
   int_overflowing_sub_memory<Torus> *overflow_sub_mem;
   int_comparison_buffer<Torus> *comparison_buffer;
   int_div_rem_memory(cuda_stream_t *stream, int_radix_params params,
                      uint32_t num_blocks, bool allocate_gpu_memory) {
     this->params = params;
     shift_mem = new int_logical_scalar_shift_buffer<Torus>(
+        stream, SHIFT_OR_ROTATE_TYPE::LEFT_SHIFT, params, 2 * num_blocks, true);
+
+    shift_mem2 = new int_logical_scalar_shift_buffer<Torus>(
         stream, SHIFT_OR_ROTATE_TYPE::LEFT_SHIFT, params, 2 * num_blocks, true);
 
     overflow_sub_mem =

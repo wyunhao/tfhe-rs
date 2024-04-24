@@ -454,6 +454,7 @@ impl ServerKey {
             // so that it can be safely used in bivariate PBSes
             let create_clean_version_of_merged_remainder = || {
                 RadixCiphertext::from_blocks(
+
                     merged_interesting_remainder
                         .blocks
                         .par_iter()

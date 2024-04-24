@@ -186,6 +186,8 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
   ciphertext_list<Torus> numerator_block(radix_params, 1, stream);
   ciphertext_list<Torus> numerator_block2(radix_params, 1, stream);
 
+  ciphertext_list<Torus> tmp_radix(radix_params, num_blocks + 1,
+                                                stream);
   ciphertext_list<Torus> interesting_remainder1(radix_params, num_blocks + 1,
                                                 stream);
   ciphertext_list<Torus> interesting_remainder2(radix_params, num_blocks,
@@ -418,6 +420,9 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
 
       interesting_remainder1.insert(0, numerator_block.first_block(), stream3);
 
+      interesting_remainder1.print_blocks_body("before_shift");
+      printf("interesting_remainder1.len: %u\n", interesting_remainder1.len);
+
       host_integer_radix_logical_scalar_shift_kb_inplace(
           stream3, interesting_remainder1.data, 1, mem_ptr->shift_mem, bsk, ksk,
           interesting_remainder1.len);
@@ -426,10 +431,14 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
 
 //      printf("interesting_remainder1.len: %u\n", interesting_remainder1.len);
 
+      tmp_radix.clone_from(interesting_remainder1, 0, interesting_remainder1
+                                                          .len - 1, stream3);
+      cudaDeviceSynchronize();
       radix_blocks_rotate_left<<<interesting_remainder1.len, 256, 0,
                                  stream3->stream>>>(
-          interesting_remainder1.data, interesting_remainder1.data, 1,
+          interesting_remainder1.data, tmp_radix.data, 1,
           interesting_remainder1.len, big_lwe_size);
+      cudaDeviceSynchronize();
 
       interesting_remainder1.print_blocks_body("after_rotate");
 
@@ -453,34 +462,34 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     }; // left_shift_interesting_remainder2
 
     stream->synchronize();
-#pragma omp parallel sections
-    {
-#pragma omp section
+//#pragma omp parallel sections
+//    {
+//#pragma omp section
       {
         // interesting_divisor
-          trim_last_interesting_divisor_bits(sub_stream_1);
+          trim_last_interesting_divisor_bits(stream);
       }
-#pragma omp section
+//#pragma omp section
       {
         // divisor_ms_blocks
-          trim_first_divisor_ms_bits(sub_stream_2);
+          trim_first_divisor_ms_bits(stream);
       }
-#pragma omp section
+//#pragma omp section
       {
         // interesting_remainder1
         // numerator_block_stack
-        left_shift_interesting_remainder1(sub_stream_3);
+        left_shift_interesting_remainder1(stream);
       }
-#pragma omp section
+//#pragma omp section
       {
         // interesting_remainder2
-          left_shift_interesting_remainder2(sub_stream_4);
+          left_shift_interesting_remainder2(stream);
       }
-    }
-    cuda_synchronize_stream(sub_stream_1);
-    cuda_synchronize_stream(sub_stream_2);
-    cuda_synchronize_stream(sub_stream_3);
-    cuda_synchronize_stream(sub_stream_4);
+//    }
+//    cuda_synchronize_stream(sub_stream_1);
+//    cuda_synchronize_stream(sub_stream_2);
+//    cuda_synchronize_stream(sub_stream_3);
+//    cuda_synchronize_stream(sub_stream_4);
 
     { // debug
         printf("cuda_phase1_output\n");
@@ -569,6 +578,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
           stream, cur_lut, radix_params.glwe_dimension,
           radix_params.polynomial_size, radix_params.message_modulus,
           radix_params.carry_modulus, lut_f_message_extract);
+      print_debug("message_extract_lut", message_extract_lut->lut, 4096);
       integer_radix_apply_univariate_lookup_table_kb(
           stream, cleaned_merged_interesting_remainder.data,
           cleaned_merged_interesting_remainder.data, bsk, ksk,
@@ -654,12 +664,12 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
               radix_params.polynomial_size, radix_params.message_modulus,
               radix_params.carry_modulus, cur_lut_f, factor);
 
-          integer_radix_apply_bivariate_lookup_table_kb<Torus>(
+          integer_radix_apply_bivariate_lookup_table_kb_debug<Torus>(
               stream, cleaned_merged_interesting_remainder.data,
               cleaned_merged_interesting_remainder.data,
               overflow_sum_radix.data, bsk, ksk,
               cleaned_merged_interesting_remainder.len,
-              zero_out_if_overflow_did_not_happen);
+              zero_out_if_overflow_did_not_happen, message_modulus - 1);
         };
 
     auto conditionally_zero_out_merged_new_remainder =

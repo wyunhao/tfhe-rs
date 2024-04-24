@@ -42,6 +42,14 @@ template <typename Torus>
 __global__ void radix_blocks_rotate_left(Torus *dst, Torus *src, uint32_t value,
                                          uint32_t blocks_count,
                                          uint32_t lwe_size) {
+  if (blockIdx.x == 0 && threadIdx.x == 0) {
+    printf("blocks_count: %u\n", blocks_count);
+
+    for (int b = 0; b < blocks_count; b++) {
+      auto cur_block = &src[lwe_size * b];
+      printf("body: %lu\n", cur_block[lwe_size - 1]);
+    }
+  }
   value %= blocks_count;
   size_t src_block_id = blockIdx.x;
 

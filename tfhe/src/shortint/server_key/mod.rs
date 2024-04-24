@@ -1004,6 +1004,7 @@ impl ServerKey {
     pub fn message_extract_assign(&self, ct: &mut Ciphertext) {
         let acc = self.generate_msg_lookup_table(|x| x, ct.message_modulus);
 
+        println!("message_extract_lut: {:?}", &acc);
         self.apply_lookup_table_assign(ct, &acc);
     }
 

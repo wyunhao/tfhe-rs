@@ -462,34 +462,34 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     }; // left_shift_interesting_remainder2
 
     stream->synchronize();
-//#pragma omp parallel sections
-//    {
-//#pragma omp section
+#pragma omp parallel sections
+    {
+#pragma omp section
       {
         // interesting_divisor
-          trim_last_interesting_divisor_bits(stream);
+          trim_last_interesting_divisor_bits(sub_stream_1);
       }
-//#pragma omp section
+#pragma omp section
       {
         // divisor_ms_blocks
-          trim_first_divisor_ms_bits(stream);
+          trim_first_divisor_ms_bits(sub_stream_2);
       }
-//#pragma omp section
+#pragma omp section
       {
         // interesting_remainder1
         // numerator_block_stack
-        left_shift_interesting_remainder1(stream);
+        left_shift_interesting_remainder1(sub_stream_3);
       }
-//#pragma omp section
+#pragma omp section
       {
         // interesting_remainder2
-          left_shift_interesting_remainder2(stream);
+          left_shift_interesting_remainder2(sub_stream_4);
       }
-//    }
-//    cuda_synchronize_stream(sub_stream_1);
-//    cuda_synchronize_stream(sub_stream_2);
-//    cuda_synchronize_stream(sub_stream_3);
-//    cuda_synchronize_stream(sub_stream_4);
+    }
+    cuda_synchronize_stream(sub_stream_1);
+    cuda_synchronize_stream(sub_stream_2);
+    cuda_synchronize_stream(sub_stream_3);
+    cuda_synchronize_stream(sub_stream_4);
 
     { // debug
         printf("cuda_phase1_output\n");

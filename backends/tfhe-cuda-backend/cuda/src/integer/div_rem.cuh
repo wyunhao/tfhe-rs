@@ -402,24 +402,24 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     // However, to keep the remainder clean (noise wise), what we do is that we
     // put the remainder block from which we need to extract the bit, as the LSB
     // of the Remainder, so that left shifting will pull the bit we need.
-    auto left_shift_interesting_remainder1 = [&](cuda_stream_t *stream1) {
+    auto left_shift_interesting_remainder1 = [&](cuda_stream_t *stream3) {
       numerator_block.clone_from(numerator_block_stack,
                                  numerator_block_stack.len - 1,
-                                 numerator_block_stack.len - 1, stream1);
+                                 numerator_block_stack.len - 1, stream3);
       numerator_block_stack.pop();
 
-      interesting_remainder1.insert(0, numerator_block.first_block(), stream1);
+      interesting_remainder1.insert(0, numerator_block.first_block(), stream3);
 
       host_integer_radix_logical_scalar_shift_kb_inplace(
-          stream1, interesting_remainder1.data, 1, mem_ptr->shift_mem, bsk, ksk,
+          stream3, interesting_remainder1.data, 1, mem_ptr->shift_mem, bsk, ksk,
           interesting_remainder1.len);
 
       interesting_remainder1.print_blocks_body("after_shift");
-//
+
 //      printf("interesting_remainder1.len: %u\n", interesting_remainder1.len);
 
       radix_blocks_rotate_left<<<interesting_remainder1.len, 256, 0,
-                                 stream1->stream>>>(
+                                 stream3->stream>>>(
           interesting_remainder1.data, interesting_remainder1.data, 1,
           interesting_remainder1.len, big_lwe_size);
 
@@ -427,34 +427,35 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
 
       numerator_block.clone_from(interesting_remainder1,
                                  interesting_remainder1.len - 1,
-                                 interesting_remainder1.len - 1, stream1);
+                                 interesting_remainder1.len - 1, stream3);
 
       interesting_remainder1.pop();
 
       if (pos_in_block != 0) {
         // We have not yet extracted all the bits from this numerator
         // so, we put it back on the front so that it gets taken next iteration
-        numerator_block_stack.push(numerator_block.first_block(), stream1);
+        numerator_block_stack.push(numerator_block.first_block(), stream3);
       }
     }; // left_shift_interesting_remainder1
 
-    auto left_shift_interesting_remainder2 = [&](cuda_stream_t *stream) {
+    auto left_shift_interesting_remainder2 = [&](cuda_stream_t *stream4) {
       host_integer_radix_logical_scalar_shift_kb_inplace(
-          stream, interesting_remainder2.data, 1, mem_ptr->shift_mem2, bsk, ksk,
+          stream4, interesting_remainder2.data, 1, mem_ptr->shift_mem2, bsk, ksk,
           interesting_remainder2.len);
     }; // left_shift_interesting_remainder2
 
+    stream->synchronize();
 #pragma omp parallel sections
     {
 #pragma omp section
       {
         // interesting_divisor
-        trim_last_interesting_divisor_bits(sub_stream_1);
+          trim_last_interesting_divisor_bits(sub_stream_1);
       }
 #pragma omp section
       {
         // divisor_ms_blocks
-        trim_first_divisor_ms_bits(sub_stream_2);
+          trim_first_divisor_ms_bits(sub_stream_2);
       }
 #pragma omp section
       {
@@ -465,7 +466,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
 #pragma omp section
       {
         // interesting_remainder2
-        left_shift_interesting_remainder2(sub_stream_4);
+          left_shift_interesting_remainder2(sub_stream_4);
       }
     }
     cuda_synchronize_stream(sub_stream_1);
@@ -474,7 +475,6 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     cuda_synchronize_stream(sub_stream_4);
 
     { // debug
-
         printf("cuda_phase1_output\n");
       interesting_divisor.print_blocks_body("cuda_interesting_divisor");
       divisor_ms_blocks.print_blocks_body("cuda_divisor_ms_blocks");
@@ -568,6 +568,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     };
 
     // phase 2
+    stream->synchronize();
 #pragma omp parallel sections
     {
 #pragma omp section
@@ -694,24 +695,25 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
                     did_not_overflow.data, radix_params.big_lwe_dimension, 1);
     };
 
-//#pragma omp parallel sections
-//    {
-//#pragma omp section
+    stream->synchronize();
+#pragma omp parallel sections
+    {
+#pragma omp section
       {
         // cleaned_merged_interesting_remainder
         conditionally_zero_out_merged_interesting_remainder(sub_stream_1);
       }
-//#pragma omp section
+#pragma omp section
       {
         // new_remainder
         conditionally_zero_out_merged_new_remainder(sub_stream_2);
       }
-//#pragma omp section
+#pragma omp section
       {
         // quotient
         set_quotient_bit(sub_stream_3);
       }
-//    }
+    }
     cuda_synchronize_stream(sub_stream_1);
     cuda_synchronize_stream(sub_stream_2);
     cuda_synchronize_stream(sub_stream_3);

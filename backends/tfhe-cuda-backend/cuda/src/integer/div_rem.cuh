@@ -32,9 +32,11 @@ template <typename Torus> struct ciphertext_list {
   size_t radix_size_bytes;
   size_t big_lwe_dimension;
 
+  cuda_stream_t *alloc_stream;
   ciphertext_list(int_radix_params params, size_t max_blocks,
                   cuda_stream_t *stream)
-      : params(params), max_blocks(max_blocks) {
+      : params(params), max_blocks(max_blocks), alloc_stream(stream) {
+    printf("alloc\n");
     big_lwe_size = params.big_lwe_dimension + 1;
     big_lwe_size_bytes = big_lwe_size * sizeof(Torus);
     radix_size = max_blocks * big_lwe_size;
@@ -44,13 +46,18 @@ template <typename Torus> struct ciphertext_list {
     len = max_blocks;
   }
 
+  ~ciphertext_list() {
+    printf("drop\n");
+    cuda_drop_async(data, alloc_stream);
+  }
   void copy_from(Torus *src, size_t start_block, size_t finish_block,
                  cuda_stream_t *stream) {
     size_t tmp_len = finish_block - start_block + 1;
     cuda_memcpy_async_gpu_to_gpu(data, &src[start_block * big_lwe_size],
                                  tmp_len * big_lwe_size_bytes, stream);
   }
-  void copy_from(ciphertext_list src, size_t start_block, size_t finish_block,
+  void copy_from(const ciphertext_list &src, size_t start_block, size_t
+                                                                 finish_block,
                  cuda_stream_t *stream) {
     copy_from(src.data, start_block, finish_block, stream);
   }
@@ -63,7 +70,8 @@ template <typename Torus> struct ciphertext_list {
                                  len * big_lwe_size_bytes, stream);
   }
 
-  void clone_from(ciphertext_list src, size_t start_block, size_t finish_block,
+  void clone_from(const ciphertext_list &src, size_t start_block, size_t
+                                                                 finish_block,
                   cuda_stream_t *stream) {
     clone_from(src.data, start_block, finish_block, stream);
   }

@@ -181,6 +181,25 @@ impl ServerKey {
         self.apply_lookup_table_assign(ct_left, &acc.acc);
     }
 
+    pub fn unchecked_apply_lookup_table_bivariate_assign_debug(
+        &self,
+        ct_left: &mut Ciphertext,
+        ct_right: &Ciphertext,
+        acc: &BivariateLookupTableOwned,
+    ) {
+        let modulus = (ct_right.degree.get() + 1) as u64;
+        assert!(modulus <= acc.ct_right_modulus.0 as u64);
+
+        self.unchecked_scalar_mul_assign(ct_left, acc.ct_right_modulus.0 as u8);
+
+        unchecked_add_assign(ct_left, ct_right);
+
+        println!("acc.ct_right_modulus.0: {:?}", acc.ct_right_modulus.0);
+        println!("after_packing: {:?}", ct_left.ct.get_body());
+        // Compute the PBS
+        self.apply_lookup_table_assign(ct_left, &acc.acc);
+    }
+
     /// Compute a keyswitch and programmable bootstrap.
     ///
     /// # Example

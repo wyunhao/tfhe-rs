@@ -60,6 +60,7 @@ void generate_ids_update_degrees(int *terms_degree, size_t *h_lwe_idx_in,
   }
 
   total_count = message_count + carry_count;
+  printf("total_count: %u\n", total_count);
 }
 /*
  * This scratch function allocates the necessary amount of data on the GPU for

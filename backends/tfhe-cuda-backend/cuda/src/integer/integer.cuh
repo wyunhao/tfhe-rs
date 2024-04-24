@@ -172,6 +172,52 @@ __host__ void integer_radix_apply_bivariate_lookup_table_kb(
                      cuda_get_max_shared_memory(stream->gpu_index), pbs_type);
 }
 
+
+template <typename Torus>
+__host__ void integer_radix_apply_bivariate_lookup_table_kb_debug(
+    cuda_stream_t *stream, Torus *lwe_array_out, Torus *lwe_array_1,
+    Torus *lwe_array_2, void *bsk, Torus *ksk, uint32_t num_radix_blocks,
+    int_radix_lut<Torus> *lut, int shift) {
+  cudaSetDevice(stream->gpu_index);
+  // apply_lookup_table_bivariate
+  auto params = lut->params;
+  auto pbs_type = params.pbs_type;
+  auto big_lwe_dimension = params.big_lwe_dimension;
+  auto small_lwe_dimension = params.small_lwe_dimension;
+  auto ks_level = params.ks_level;
+  auto ks_base_log = params.ks_base_log;
+  auto pbs_level = params.pbs_level;
+  auto pbs_base_log = params.pbs_base_log;
+  auto glwe_dimension = params.glwe_dimension;
+  auto polynomial_size = params.polynomial_size;
+  auto grouping_factor = params.grouping_factor;
+  auto message_modulus = params.message_modulus;
+
+  // Left message is shifted
+  auto lwe_array_pbs_in = lut->tmp_lwe_before_ks;
+  pack_bivariate_blocks(stream, lwe_array_pbs_in, lut->lwe_trivial_indexes,
+                        lwe_array_1, lwe_array_2, lut->lwe_indexes_in,
+                        big_lwe_dimension, shift, num_radix_blocks);
+  check_cuda_error(cudaGetLastError());
+
+  print_debug("after_packing", &lwe_array_pbs_in[2048], 1);
+  printf("shift: %u\n", message_modulus);
+  // Apply LUT
+  cuda_keyswitch_lwe_ciphertext_vector(
+      stream, lut->tmp_lwe_after_ks, lut->lwe_trivial_indexes, lwe_array_pbs_in,
+      lut->lwe_trivial_indexes, ksk, big_lwe_dimension, small_lwe_dimension,
+      ks_base_log, ks_level, num_radix_blocks);
+
+  execute_pbs<Torus>(stream, lwe_array_out, lut->lwe_indexes_out, lut->lut,
+                     lut->lut_indexes, lut->tmp_lwe_after_ks,
+                     lut->lwe_trivial_indexes, bsk, lut->buffer, glwe_dimension,
+                     small_lwe_dimension, polynomial_size, pbs_base_log,
+                     pbs_level, grouping_factor, num_radix_blocks, 1, 0,
+                     cuda_get_max_shared_memory(stream->gpu_index), pbs_type);
+}
+
+
+
 // Rotates the slice in-place such that the first mid elements of the slice move
 // to the end while the last array_length elements move to the front. After
 // calling rotate_left, the element previously at index mid will become the

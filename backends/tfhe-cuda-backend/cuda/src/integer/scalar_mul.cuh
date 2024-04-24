@@ -97,6 +97,7 @@ __host__ void host_integer_scalar_mul_radix(
     }
   }
 
+  printf("shemovida\n");
   if (j == 0) {
     // lwe array = 0
     cuda_memset_async(lwe_array, 0, num_radix_blocks * lwe_size_bytes, stream);
@@ -105,6 +106,7 @@ __host__ void host_integer_scalar_mul_radix(
     for (int i = 0; i < j * num_radix_blocks; i++) {
       terms_degree[i] = message_modulus - 1;
     }
+    printf("shemovida2\n");
     host_integer_sum_ciphertexts_vec_kb<T, params>(
         stream, lwe_array, all_shifted_buffer, terms_degree, bsk, ksk,
         mem->sum_ciphertexts_vec_mem, num_radix_blocks, j);

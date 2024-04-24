@@ -261,8 +261,9 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
   for (int i = total_bits - 1; i >= 0; i--) {
     { // debug
       printf("cuda i = %u\n", i);
+
+      printf("cuda_phase1\n");
     }
-    printf("cuda_phase1\n");
     uint32_t block_of_bit = i / num_bits_in_message;
     uint32_t pos_in_block = i % num_bits_in_message;
 
@@ -307,10 +308,11 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
       printf("cuda_(msb_bit_set + 1) / num_bits_in_message %u\n",
              (msb_bit_set + 1) / num_bits_in_message);
 
-      interesting_remainder1.print_blocks_body("cuda_interesting_remainder1");
-      interesting_remainder2.print_blocks_body("cuda_interesting_remainder2");
       interesting_divisor.print_blocks_body("cuda_interesting_divisor");
       divisor_ms_blocks.print_blocks_body("cuda_divisor_ms_blocks");
+      interesting_remainder1.print_blocks_body("cuda_interesting_remainder1");
+      numerator_block_stack.print_blocks_body("cuda_numerator_block_stack");
+      interesting_remainder2.print_blocks_body("cuda_interesting_remainder2");
     }
 
     auto trim_last_interesting_divisor_bits = [&](cuda_stream_t *stream) {
@@ -400,41 +402,46 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     // However, to keep the remainder clean (noise wise), what we do is that we
     // put the remainder block from which we need to extract the bit, as the LSB
     // of the Remainder, so that left shifting will pull the bit we need.
-    auto left_shift_interesting_remainder1 = [&](cuda_stream_t *stream) {
+    auto left_shift_interesting_remainder1 = [&](cuda_stream_t *stream1) {
       numerator_block.clone_from(numerator_block_stack,
                                  numerator_block_stack.len - 1,
-                                 numerator_block_stack.len - 1, stream);
+                                 numerator_block_stack.len - 1, stream1);
       numerator_block_stack.pop();
 
-      interesting_remainder1.insert(0, numerator_block.first_block(), stream);
+      interesting_remainder1.insert(0, numerator_block.first_block(), stream1);
 
       host_integer_radix_logical_scalar_shift_kb_inplace(
-          stream, interesting_remainder1.data, 1, mem_ptr->shift_mem, bsk, ksk,
+          stream1, interesting_remainder1.data, 1, mem_ptr->shift_mem, bsk, ksk,
           interesting_remainder1.len);
 
+      interesting_remainder1.print_blocks_body("after_shift");
+//
+//      printf("interesting_remainder1.len: %u\n", interesting_remainder1.len);
+
       radix_blocks_rotate_left<<<interesting_remainder1.len, 256, 0,
-                                 stream->stream>>>(
+                                 stream1->stream>>>(
           interesting_remainder1.data, interesting_remainder1.data, 1,
           interesting_remainder1.len, big_lwe_size);
 
+      interesting_remainder1.print_blocks_body("after_rotate");
 
       numerator_block.clone_from(interesting_remainder1,
                                  interesting_remainder1.len - 1,
-                                 interesting_remainder1.len - 1, stream);
+                                 interesting_remainder1.len - 1, stream1);
 
       interesting_remainder1.pop();
 
       if (pos_in_block != 0) {
         // We have not yet extracted all the bits from this numerator
         // so, we put it back on the front so that it gets taken next iteration
-        numerator_block_stack.push(numerator_block.first_block(), stream);
+        numerator_block_stack.push(numerator_block.first_block(), stream1);
       }
     }; // left_shift_interesting_remainder1
 
     auto left_shift_interesting_remainder2 = [&](cuda_stream_t *stream) {
       host_integer_radix_logical_scalar_shift_kb_inplace(
           stream, interesting_remainder2.data, 1, mem_ptr->shift_mem2, bsk, ksk,
-          num_blocks);
+          interesting_remainder2.len);
     }; // left_shift_interesting_remainder2
 
 #pragma omp parallel sections
@@ -486,7 +493,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
     host_addition(stream, merged_interesting_remainder.data,
                   merged_interesting_remainder.data,
                   interesting_remainder2.data, radix_params.big_lwe_dimension,
-                  num_blocks);
+                  merged_interesting_remainder.len);
 
     // after create_clean_version_of_merged_remainder
     // `merged_interesting_remainder` will be reused as
@@ -621,6 +628,7 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
 
     printf("cuda_phase3\n");
 
+    cuda_synchronize_stream(stream);
 
     auto conditionally_zero_out_merged_interesting_remainder =
         [&](cuda_stream_t *stream) {
@@ -661,10 +669,18 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
               radix_params.carry_modulus, cur_lut_f, factor);
 
 
-          integer_radix_apply_bivariate_lookup_table_kb<Torus>(
+          print_debug("zero_out_if_overflow_happened",
+                      zero_out_if_overflow_happened->lut, 4096);
+
+          new_remainder.print_blocks_body("new_reminder_before");
+          overflow_sum_radix.print_blocks_body("overflow_sum_radix_before");
+
+          integer_radix_apply_bivariate_lookup_table_kb_debug<Torus>(
               stream, new_remainder.data, new_remainder.data,
               overflow_sum_radix.data, bsk, ksk, new_remainder.len,
-              zero_out_if_overflow_happened);
+              zero_out_if_overflow_happened, message_modulus - 1);
+
+          new_remainder.print_blocks_body("new_remainder_after_call");
         };
 
     auto set_quotient_bit = [&](cuda_stream_t *stream) {
@@ -678,24 +694,24 @@ __host__ void host_integer_div_rem_kb(cuda_stream_t *stream, Torus *quotient,
                     did_not_overflow.data, radix_params.big_lwe_dimension, 1);
     };
 
-#pragma omp parallel sections
-    {
-#pragma omp section
+//#pragma omp parallel sections
+//    {
+//#pragma omp section
       {
         // cleaned_merged_interesting_remainder
         conditionally_zero_out_merged_interesting_remainder(sub_stream_1);
       }
-#pragma omp section
+//#pragma omp section
       {
         // new_remainder
         conditionally_zero_out_merged_new_remainder(sub_stream_2);
       }
-#pragma omp section
+//#pragma omp section
       {
         // quotient
         set_quotient_bit(sub_stream_3);
       }
-    }
+//    }
     cuda_synchronize_stream(sub_stream_1);
     cuda_synchronize_stream(sub_stream_2);
     cuda_synchronize_stream(sub_stream_3);

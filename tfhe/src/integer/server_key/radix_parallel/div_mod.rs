@@ -220,11 +220,22 @@ impl ServerKey {
                     ((msb_bit_set + 1) / num_bits_in_message as usize)
                 );
 
+                for block in &interesting_divisor.blocks {
+                    println!("rust_interesting_divisor: {:?}", block.ct.get_body().data);
+                }
+
+                for block in &divisor_ms_blocks.blocks {
+                    println!("rust_divisor_ms_blocks: {:?}", block.ct.get_body().data);
+                }
+
                 for block in &interesting_remainder1.blocks {
                     println!(
                         "rust_interesting_remainder1: {:?}",
                         block.ct.get_body().data
                     );
+                }
+                for block in &numerator_block_stack {
+                    println!("rust_numerator_block_stack: {:?}", block.ct.get_body().data);
                 }
 
                 for block in &interesting_remainder2.blocks {
@@ -234,13 +245,6 @@ impl ServerKey {
                     );
                 }
 
-                for block in &interesting_divisor.blocks {
-                    println!("rust_interesting_divisor: {:?}", block.ct.get_body().data);
-                }
-
-                for block in &divisor_ms_blocks.blocks {
-                    println!("rust_divisor_ms_blocks: {:?}", block.ct.get_body().data);
-                }
             }
             // We split the divisor at a block position, when in reality the split should be at a
             // bit position meaning that potentially (depending on msb_bit_set) the
@@ -330,9 +334,26 @@ impl ServerKey {
                     1,
                 );
 
+                for block in &interesting_remainder1.blocks {
+                    println!(
+                        "rust_after_shift: {:?}",
+                        block.ct.get_body().data
+                    );
+                }
+
+
                 // Extract the block we prepended, and see if it should be dropped
                 // or added back for processing
                 interesting_remainder1.blocks.rotate_left(1);
+
+
+                for block in &interesting_remainder1.blocks {
+                    println!(
+                        "rust_after_rotate: {:?}",
+                        block.ct.get_body().data
+                    );
+                }
+
                 // This unwrap is unreachable, as we are removing the block we added earlier
                 let numerator_block = interesting_remainder1.blocks.pop().unwrap();
                 if pos_in_block != 0 {
@@ -535,13 +556,17 @@ impl ServerKey {
                         },
                         factor,
                     );
+//                println!("zero_out_if_overflow_happened: {:?}", zero_out_if_overflow_happened.acc);
+                println!("new_remainder: {:?}", &new_remainder.blocks.first().unwrap().ct.get_body());
+                println!("overflow_sum: {:?}", &overflow_sum.ct.get_body());
                 new_remainder.blocks_mut().par_iter_mut().for_each(|block| {
-                    self.key.unchecked_apply_lookup_table_bivariate_assign(
+                    self.key.unchecked_apply_lookup_table_bivariate_assign_debug(
                         block,
                         &overflow_sum,
                         &zero_out_if_overflow_happened,
                     );
                 });
+                println!("new_remainder: {:?}", &new_remainder.blocks.first().unwrap().ct.get_body());
             };
 
             let mut set_quotient_bit = || {

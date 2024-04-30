@@ -172,7 +172,7 @@ pub fn generate_lwe_multi_bit_bootstrap_key<
             encrypt_constant_ggsw_ciphertext(
                 output_glwe_secret_key,
                 &mut ggsw,
-                Plaintext(key_bits_plaintext),
+                Cleartext(key_bits_plaintext),
                 noise_distribution,
                 &mut inner_loop_generator,
             );
@@ -404,7 +404,7 @@ pub fn par_generate_lwe_multi_bit_bootstrap_key<
                         par_encrypt_constant_ggsw_ciphertext(
                             output_glwe_secret_key,
                             ggsw,
-                            Plaintext(key_bits_plaintext),
+                            Cleartext(key_bits_plaintext),
                             noise_distribution,
                             &mut inner_loop_generator,
                         );
@@ -611,7 +611,7 @@ pub fn generate_seeded_lwe_multi_bit_bootstrap_key<
             encrypt_constant_seeded_ggsw_ciphertext_with_existing_generator(
                 output_glwe_secret_key,
                 &mut ggsw,
-                Plaintext(key_bits_plaintext),
+                Cleartext(key_bits_plaintext),
                 noise_distribution,
                 &mut inner_loop_generator,
             );
@@ -774,7 +774,7 @@ pub fn par_generate_seeded_lwe_multi_bit_bootstrap_key<
                         par_encrypt_constant_seeded_ggsw_ciphertext_with_existing_generator(
                             output_glwe_secret_key,
                             ggsw,
-                            Plaintext(key_bits_plaintext),
+                            Cleartext(key_bits_plaintext),
                             noise_distribution,
                             &mut inner_loop_generator,
                         );

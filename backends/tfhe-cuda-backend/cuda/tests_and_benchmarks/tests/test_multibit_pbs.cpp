@@ -164,7 +164,7 @@ TEST_P(MultiBitProgrammableBootstrapTestPrimitives_u64,
         // Compute the rounding bit
         uint64_t rounding = (decrypted & rounding_bit) << 1;
         uint64_t decoded = (decrypted + rounding) / delta;
-        EXPECT_EQ(decoded, plaintext / delta)
+        ASSERT_EQ(decoded, plaintext / delta)
             << "Repetition: " << r << ", sample: " << s << ", input: " << j;
       }
     }

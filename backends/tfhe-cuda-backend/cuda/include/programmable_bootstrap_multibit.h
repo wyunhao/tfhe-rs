@@ -217,16 +217,16 @@ template <typename Torus> struct pbs_buffer<Torus, PBS_TYPE::MULTI_BIT> {
         level_count * (glwe_dimension + 1) * input_lwe_ciphertext_count;
 
 #if CUDA_ARCH >= 900
-    uint64_t full_sm_tbc_accumulate =
+    uint64_t full_sm_tbc =
         get_buffer_size_full_sm_tbc_multibit_programmable_bootstrap<Torus>(
             polynomial_size);
-    uint64_t partial_sm_tbc_accumulate =
+    uint64_t partial_sm_tbc =
         get_buffer_size_partial_sm_tbc_multibit_programmable_bootstrap<Torus>(
             polynomial_size);
     uint64_t minimum_sm_tbc =
         get_buffer_size_sm_dsm_plus_tbc_multibit_programmable_bootstrap<Torus>(
             polynomial_size);
-    auto num_blocks_acc_tbc = num_blocks_acc_cg;
+    auto num_blocks_tbc = num_blocks_acc_cg;
 #endif
 
     if (allocate_gpu_memory) {
@@ -268,20 +268,19 @@ template <typename Torus> struct pbs_buffer<Torus, PBS_TYPE::MULTI_BIT> {
         // is minimum_sm_tbc. We know that minimum_sm_tbc bytes are available
         // because otherwise the previous check would have redirected
         // computation to some other variant. If over that we don't have more
-        // partial_sm_tbc_accumulate bytes, TBC PBS will run on NOSM. If we have
-        // partial_sm_tbc_accumulate but not full_sm_tbc_accumulate bytes, it
+        // partial_sm_tbc bytes, TBC PBS will run on NOSM. If we have
+        // partial_sm_tbc but not full_sm_tbc bytes, it
         // will run on PARTIALSM. Otherwise, FULLSM.
         //
         // NOSM mode actually requires minimum_sm_tbc shared memory bytes.
 
         // Accumulator TBC
-        if (max_shared_memory < partial_sm_tbc_accumulate + minimum_sm_tbc)
+        if (max_shared_memory < partial_sm_tbc + minimum_sm_tbc)
           d_mem_acc_tbc = (int8_t *)cuda_malloc_async(
-              num_blocks_acc_tbc * full_sm_tbc_accumulate, stream, gpu_index);
-        else if (max_shared_memory < full_sm_tbc_accumulate + minimum_sm_tbc)
+              num_blocks_tbc * full_sm_tbc, stream, gpu_index);
+        else if (max_shared_memory < full_sm_tbc + minimum_sm_tbc)
           d_mem_acc_tbc = (int8_t *)cuda_malloc_async(
-              num_blocks_acc_tbc * partial_sm_tbc_accumulate, stream,
-              gpu_index);
+              num_blocks_tbc * partial_sm_tbc, stream, gpu_index);
         break;
 #endif
       default:

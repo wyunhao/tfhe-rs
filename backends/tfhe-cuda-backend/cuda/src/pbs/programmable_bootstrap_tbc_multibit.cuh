@@ -17,70 +17,101 @@
 #include "types/complex/operations.cuh"
 #include <vector>
 
-template <typename Torus, class params>
-__device__ void
-compute_keybundle(double2 *keybundle_out, Torus *lwe_array_in,
+template <typename Torus, class params, sharedMemDegree SMD>
+__global__ void
+compute_keybundle(double2 *keybundle_out, Torus *block_lwe_array_in,
                   Torus *bootstrapping_key, uint32_t lwe_dimension,
                   uint32_t glwe_dimension, uint32_t polynomial_size,
                   uint32_t grouping_factor, uint32_t base_log,
                   uint32_t level_count, uint32_t glwe_id, uint32_t level_id,
-                  uint32_t lwe_iteration, Torus *accumulator) {
+                  uint32_t lwe_iteration, Torus *device_mem, uint64_t device_memory_size_per_block) {
 
-  // Computes one keybundle
-  uint32_t rev_lwe_iteration =
-      ((lwe_dimension / grouping_factor) - lwe_iteration - 1);
+  extern __shared__ int8_t sharedmem[];
+  int8_t *selected_memory = sharedmem;
 
-  // ////////////////////////////////
-  // Keygen guarantees the first term is a constant term of the polynomial, no
-  // polynomial multiplication required
-  Torus *bsk_slice = get_multi_bit_ith_lwe_gth_group_kth_block(
-      bootstrapping_key, 0, rev_lwe_iteration, glwe_id, level_id,
-      grouping_factor, 2 * polynomial_size, glwe_dimension, level_count);
+  if constexpr (SMD == FULLSM) {
+    selected_memory = sharedmem;
+  } else {
+    int block_index = blockIdx.x + blockIdx.y * gridDim.x +
+                      blockIdx.z * gridDim.x * gridDim.y;
+    selected_memory = &device_mem[block_index * device_memory_size_per_block];
+  }
 
-  for (int poly_id = 0; poly_id < glwe_dimension + 1; poly_id++) {
+  // Ids
+  uint32_t poly_id = blockIdx.x;
+
+    //
+    Torus *accumulator = (Torus *)selected_memory;
+
+    ////////////////////////////////////////////////////////////
+    // Computes all keybundles
+    uint32_t rev_lwe_iteration =
+        ((lwe_dimension / grouping_factor) - lwe_iteration - 1);
+
+    // ////////////////////////////////
+    // Keygen guarantees the first term is a constant term of the polynomial, no
+    // polynomial multiplication required
+    Torus *bsk_slice = get_multi_bit_ith_lwe_gth_group_kth_block(
+        bootstrapping_key, 0, rev_lwe_iteration, glwe_id, level_id,
+        grouping_factor, 2 * polynomial_size, glwe_dimension, level_count);
     Torus *bsk_poly = bsk_slice + poly_id * params::degree;
-    Torus *accumulator_poly = accumulator + poly_id * params::degree;
 
     copy_polynomial<Torus, params::opt, params::degree / params::opt>(
-        bsk_poly, accumulator_poly);
-  }
+        bsk_poly, accumulator);
 
-  // Accumulate the other terms
-  for (int g = 1; g < (1 << grouping_factor); g++) {
+    // Accumulate the other terms
+    for (int g = 1; g < (1 << grouping_factor); g++) {
 
-    Torus *bsk_slice = get_multi_bit_ith_lwe_gth_group_kth_block(
-        bootstrapping_key, g, rev_lwe_iteration, glwe_id, level_id,
-        grouping_factor, 2 * polynomial_size, glwe_dimension, level_count);
-
-    // Calculates the monomial degree
-    Torus *lwe_array_group = lwe_array_in + rev_lwe_iteration * grouping_factor;
-    uint32_t monomial_degree = calculates_monomial_degree<Torus, params>(
-        lwe_array_group, g, grouping_factor);
-
-    // Multiply by the bsk element
-    for (int poly_id = 0; poly_id < glwe_dimension + 1; poly_id++) {
+      Torus *bsk_slice = get_multi_bit_ith_lwe_gth_group_kth_block(
+          bootstrapping_key, g, rev_lwe_iteration, glwe_id, level_id,
+          grouping_factor, 2 * polynomial_size, glwe_dimension, level_count);
       Torus *bsk_poly = bsk_slice + poly_id * params::degree;
-      Torus *accumulator_poly = accumulator + poly_id * params::degree;
 
+      // Calculates the monomial degree
+      Torus *lwe_array_group =
+          block_lwe_array_in + rev_lwe_iteration * grouping_factor;
+      uint32_t monomial_degree = calculates_monomial_degree<Torus, params>(
+          lwe_array_group, g, grouping_factor);
+
+      synchronize_threads_in_block();
+      // Multiply by the bsk element
       polynomial_product_accumulate_by_monomial<Torus, params>(
-          accumulator_poly, bsk_poly, monomial_degree, false);
+          accumulator, bsk_poly, monomial_degree, false);
+    }
+
+    synchronize_threads_in_block();
+
+    double2 *fft = (double2 *)selected_memory;
+
+    // Move accumulator to local memory
+    double2 temp[params::opt / 2];
+    int tid = threadIdx.x;
+#pragma unroll
+    for (int i = 0; i < params::opt / 2; i++) {
+      temp[i].x = __ll2double_rn((int64_t)accumulator[tid]);
+      temp[i].y =
+          __ll2double_rn((int64_t)accumulator[tid + params::degree / 2]);
+      temp[i].x /= (double)std::numeric_limits<Torus>::max();
+      temp[i].y /= (double)std::numeric_limits<Torus>::max();
+      tid += params::degree / params::opt;
+    }
+
+    synchronize_threads_in_block();
+    // Move from local memory back to shared memory but as complex
+    tid = threadIdx.x;
+#pragma unroll
+    for (int i = 0; i < params::opt / 2; i++) {
+      fft[tid] = temp[i];
+      tid += params::degree / params::opt;
     }
     synchronize_threads_in_block();
-  }
+    NSMFFT_direct<HalfDegree<params>>(fft);
 
-  int tid = threadIdx.x;
-#pragma unroll
-  for (int i = 0; i < params::opt; i++) {
-    keybundle_out[tid].x = __ll2double_rn((int64_t)accumulator[tid]);
-    keybundle_out[tid].y =
-        __ll2double_rn((int64_t)accumulator[tid + params::degree / 2]);
-    keybundle_out[tid].x /= (double)std::numeric_limits<Torus>::max();
-    keybundle_out[tid].y /= (double)std::numeric_limits<Torus>::max();
-    tid += params::degree / params::opt;
-  }
-  synchronize_threads_in_block();
-  NSMFFT_direct<HalfDegree<params>>(keybundle_out);
-  NSMFFT_direct<HalfDegree<params>>(keybundle_out + params::degree / 2);
+    // lwe iteration
+    auto keybundle_poly = keybundle_out + poly_id * params::degree / 2;
+
+    copy_polynomial<double2, params::opt / 2, params::degree / params::opt>(
+        fft, keybundle_poly);
 }
 
 template <typename Torus, class params, sharedMemDegree SMD>
@@ -111,8 +142,7 @@ __global__ void device_multi_bit_programmable_bootstrap(
   }
 
   //
-  Torus *accumulator_keybundle = (Torus *)selected_memory;
-  Torus *accumulator = accumulator_keybundle + polynomial_size * 2;
+  Torus *accumulator = (Torus *)selected_memory;
   double2 *accumulator_fft =
       (double2 *)accumulator +
       (ptrdiff_t)(sizeof(Torus) * polynomial_size / sizeof(double2));
@@ -158,11 +188,11 @@ __global__ void device_multi_bit_programmable_bootstrap(
         get_ith_mask_kth_block(keybundle, 0, blockIdx.y, blockIdx.x,
                                polynomial_size, glwe_dimension, level_count);
 
-    compute_keybundle<Torus, params>(
-        keybundle_out, block_lwe_array_in, bootstrapping_key, lwe_dimension,
-        glwe_dimension, polynomial_size, grouping_factor, base_log, level_count,
-        blockIdx.y, blockIdx.x, lwe_iteration, accumulator_keybundle);
-    synchronize_threads_in_block();
+    if(threadIdx.x == 0)
+        compute_keybundle<Torus, params, FULLSM><<<glwe_dimension+1, blockDim, sizeof(Torus) * polynomial_size>>>(
+            keybundle_out, block_lwe_array_in, bootstrapping_key, lwe_dimension,
+            glwe_dimension, polynomial_size, grouping_factor, base_log, level_count,
+            blockIdx.y, blockIdx.x, lwe_iteration, NULL, sizeof(Torus) * polynomial_size);
 
     cluster.sync();
 
@@ -224,8 +254,7 @@ template <typename Torus>
 __host__ __device__ uint64_t
 get_buffer_size_full_sm_tbc_multibit_programmable_bootstrap(
     uint32_t polynomial_size) {
-  return sizeof(Torus) * polynomial_size * 2 + // accumulator_keybundle
-         sizeof(Torus) * polynomial_size +     // accumulator
+  return sizeof(Torus) * polynomial_size +     // accumulator
          sizeof(double2) * polynomial_size / 2;
 }
 

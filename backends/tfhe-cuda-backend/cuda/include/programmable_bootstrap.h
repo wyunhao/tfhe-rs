@@ -252,7 +252,6 @@ template <typename Torus> struct pbs_buffer<Torus, PBS_TYPE::CLASSICAL> {
       } break;
 #if CUDA_ARCH >= 900
       case PBS_VARIANT::TBC: {
-
         bool supports_dsm =
             supports_distributed_shared_memory_on_classic_programmable_bootstrap<
                 Torus>(polynomial_size, max_shared_memory);

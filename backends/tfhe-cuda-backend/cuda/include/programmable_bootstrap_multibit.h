@@ -217,15 +217,25 @@ template <typename Torus> struct pbs_buffer<Torus, PBS_TYPE::MULTI_BIT> {
         level_count * (glwe_dimension + 1) * input_lwe_ciphertext_count;
 
 #if CUDA_ARCH >= 900
+    auto supports_dsm =
+        supports_distributed_shared_memory_on_multibit_programmable_bootstrap<
+            Torus>(polynomial_size, max_shared_memory);
+
     uint64_t full_sm_tbc =
         get_buffer_size_full_sm_tbc_multibit_programmable_bootstrap<Torus>(
             polynomial_size);
     uint64_t partial_sm_tbc =
         get_buffer_size_partial_sm_tbc_multibit_programmable_bootstrap<Torus>(
             polynomial_size);
-    uint64_t minimum_sm_tbc =
-        get_buffer_size_sm_dsm_plus_tbc_multibit_programmable_bootstrap<Torus>(
-            polynomial_size);
+    uint64_t minimum_sm_tbc = 0;
+    if (supports_dsm)
+      minimum_sm_tbc =
+          get_buffer_size_sm_dsm_plus_tbc_multibit_programmable_bootstrap<
+              Torus>(polynomial_size);
+
+    uint64_t full_dm_tbc = full_sm_tbc;
+    uint64_t partial_dm_tbc = full_sm_tbc - partial_sm_tbc;
+
     auto num_blocks_tbc = num_blocks_acc_cg;
 #endif
 
@@ -277,10 +287,10 @@ template <typename Torus> struct pbs_buffer<Torus, PBS_TYPE::MULTI_BIT> {
         // Accumulator TBC
         if (max_shared_memory < partial_sm_tbc + minimum_sm_tbc)
           d_mem_acc_tbc = (int8_t *)cuda_malloc_async(
-              num_blocks_tbc * full_sm_tbc, stream, gpu_index);
+              num_blocks_tbc * full_dm_tbc, stream, gpu_index);
         else if (max_shared_memory < full_sm_tbc + minimum_sm_tbc)
           d_mem_acc_tbc = (int8_t *)cuda_malloc_async(
-              num_blocks_tbc * partial_sm_tbc, stream, gpu_index);
+              num_blocks_tbc * partial_dm_tbc, stream, gpu_index);
         break;
 #endif
       default:

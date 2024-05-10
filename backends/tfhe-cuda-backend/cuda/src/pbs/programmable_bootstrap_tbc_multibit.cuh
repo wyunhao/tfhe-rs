@@ -17,6 +17,72 @@
 #include "types/complex/operations.cuh"
 #include <vector>
 
+template <typename Torus, class params>
+__device__ void
+compute_keybundle(double2 *keybundle_out, Torus *lwe_array_in,
+                  Torus *bootstrapping_key, uint32_t lwe_dimension,
+                  uint32_t glwe_dimension, uint32_t polynomial_size,
+                  uint32_t grouping_factor, uint32_t base_log,
+                  uint32_t level_count, uint32_t glwe_id, uint32_t level_id,
+                  uint32_t lwe_iteration, Torus *accumulator) {
+
+  // Computes one keybundle
+  uint32_t rev_lwe_iteration =
+      ((lwe_dimension / grouping_factor) - lwe_iteration - 1);
+
+  // ////////////////////////////////
+  // Keygen guarantees the first term is a constant term of the polynomial, no
+  // polynomial multiplication required
+  Torus *bsk_slice = get_multi_bit_ith_lwe_gth_group_kth_block(
+      bootstrapping_key, 0, rev_lwe_iteration, glwe_id, level_id,
+      grouping_factor, 2 * polynomial_size, glwe_dimension, level_count);
+
+  for (int poly_id = 0; poly_id < glwe_dimension + 1; poly_id++) {
+    Torus *bsk_poly = bsk_slice + poly_id * params::degree;
+    Torus *accumulator_poly = accumulator + poly_id * params::degree;
+
+    copy_polynomial<Torus, params::opt, params::degree / params::opt>(
+        bsk_poly, accumulator_poly);
+  }
+
+  // Accumulate the other terms
+  for (int g = 1; g < (1 << grouping_factor); g++) {
+
+    Torus *bsk_slice = get_multi_bit_ith_lwe_gth_group_kth_block(
+        bootstrapping_key, g, rev_lwe_iteration, glwe_id, level_id,
+        grouping_factor, 2 * polynomial_size, glwe_dimension, level_count);
+
+    // Calculates the monomial degree
+    Torus *lwe_array_group = lwe_array_in + rev_lwe_iteration * grouping_factor;
+    uint32_t monomial_degree = calculates_monomial_degree<Torus, params>(
+        lwe_array_group, g, grouping_factor);
+
+    // Multiply by the bsk element
+    for (int poly_id = 0; poly_id < glwe_dimension + 1; poly_id++) {
+      Torus *bsk_poly = bsk_slice + poly_id * params::degree;
+      Torus *accumulator_poly = accumulator + poly_id * params::degree;
+
+      polynomial_product_accumulate_by_monomial<Torus, params>(
+          accumulator_poly, bsk_poly, monomial_degree, false);
+    }
+    synchronize_threads_in_block();
+  }
+
+  int tid = threadIdx.x;
+#pragma unroll
+  for (int i = 0; i < params::opt; i++) {
+    keybundle_out[tid].x = __ll2double_rn((int64_t)accumulator[tid]);
+    keybundle_out[tid].y =
+        __ll2double_rn((int64_t)accumulator[tid + params::degree / 2]);
+    keybundle_out[tid].x /= (double)std::numeric_limits<Torus>::max();
+    keybundle_out[tid].y /= (double)std::numeric_limits<Torus>::max();
+    tid += params::degree / params::opt;
+  }
+  synchronize_threads_in_block();
+  NSMFFT_direct<HalfDegree<params>>(keybundle_out);
+  NSMFFT_direct<HalfDegree<params>>(keybundle_out + params::degree / 2);
+}
+
 template <typename Torus, class params, sharedMemDegree SMD>
 __global__ void device_multi_bit_programmable_bootstrap(
     Torus *lwe_array_out, Torus *lwe_output_indexes, Torus *lut_vector,
@@ -80,75 +146,6 @@ __global__ void device_multi_bit_programmable_bootstrap(
   ////////////////////////////////////////////////////////////
   for (int lwe_iteration = 0; lwe_iteration < lwe_dimension / grouping_factor;
        lwe_iteration++) {
-    // Computes one keybundle
-    uint32_t rev_lwe_iteration =
-        ((lwe_dimension / grouping_factor) - lwe_iteration - 1);
-
-    // ////////////////////////////////
-    // Keygen guarantees the first term is a constant term of the polynomial, no
-    // polynomial multiplication required
-    Torus *bsk_slice = get_multi_bit_ith_lwe_gth_group_kth_block(
-        bootstrapping_key, 0, rev_lwe_iteration, blockIdx.y, blockIdx.x,
-        grouping_factor, 2 * polynomial_size, glwe_dimension, level_count);
-
-    // Initialize the accumulator
-    copy_polynomial<Torus, 2 * params::opt, params::degree / params::opt>(
-        bsk_slice, accumulator_keybundle);
-
-    // Accumulate the other terms
-    for (int g = 1; g < (1 << grouping_factor); g++) {
-
-      Torus *bsk_slice = get_multi_bit_ith_lwe_gth_group_kth_block(
-          bootstrapping_key, g, rev_lwe_iteration, blockIdx.y, blockIdx.x,
-          grouping_factor, 2 * polynomial_size, glwe_dimension, level_count);
-
-      // Calculates the monomial degree
-      Torus *lwe_array_group =
-          block_lwe_array_in + rev_lwe_iteration * grouping_factor;
-      uint32_t monomial_degree = calculates_monomial_degree<Torus, params>(
-          lwe_array_group, g, grouping_factor);
-
-      synchronize_threads_in_block();
-      for (int poly_id = 0; poly_id < glwe_dimension + 1; poly_id++) {
-        Torus *bsk_poly = bsk_slice + poly_id * params::degree;
-        Torus *accumulator_poly =
-            accumulator_keybundle + poly_id * params::degree;
-        // Multiply by the bsk element
-        polynomial_product_accumulate_by_monomial<Torus, params>(
-            accumulator_poly, bsk_poly, monomial_degree, false);
-      }
-    }
-
-    synchronize_threads_in_block();
-
-    // Convert the keybundle to fourier domain
-    double2 *fft = (double2 *)selected_memory;
-
-    // Move accumulator to local memory
-    double2 temp[params::opt];
-    int tid = threadIdx.x;
-#pragma unroll
-    for (int i = 0; i < params::opt; i++) {
-      temp[i].x = __ll2double_rn((int64_t)accumulator_keybundle[tid]);
-      temp[i].y = __ll2double_rn(
-          (int64_t)accumulator_keybundle[tid + params::degree / 2]);
-      temp[i].x /= (double)std::numeric_limits<Torus>::max();
-      temp[i].y /= (double)std::numeric_limits<Torus>::max();
-      tid += params::degree / params::opt;
-    }
-
-    synchronize_threads_in_block();
-    // Move from local memory back to shared memory but as complex
-    tid = threadIdx.x;
-#pragma unroll
-    for (int i = 0; i < params::opt; i++) {
-      fft[tid] = temp[i];
-      tid += params::degree / params::opt;
-    }
-    synchronize_threads_in_block();
-    NSMFFT_direct<HalfDegree<params>>(fft);
-    NSMFFT_direct<HalfDegree<params>>(fft + params::degree / 2);
-    synchronize_threads_in_block();
 
     uint32_t keybundle_size_per_input = level_count * (glwe_dimension + 1) *
                                         (glwe_dimension + 1) *
@@ -161,8 +158,11 @@ __global__ void device_multi_bit_programmable_bootstrap(
         get_ith_mask_kth_block(keybundle, 0, blockIdx.y, blockIdx.x,
                                polynomial_size, glwe_dimension, level_count);
 
-    copy_polynomial<double2, params::opt, params::degree / params::opt>(
-        fft, keybundle_out);
+    compute_keybundle<Torus, params>(
+        keybundle_out, block_lwe_array_in, bootstrapping_key, lwe_dimension,
+        glwe_dimension, polynomial_size, grouping_factor, base_log, level_count,
+        blockIdx.y, blockIdx.x, lwe_iteration, accumulator_keybundle);
+    synchronize_threads_in_block();
 
     cluster.sync();
 
@@ -313,17 +313,20 @@ __host__ void host_tbc_multi_bit_programmable_bootstrap(
       supports_distributed_shared_memory_on_multibit_programmable_bootstrap<
           Torus>(polynomial_size, max_shared_memory);
 
-  uint64_t full_dm =
+  uint64_t full_sm_tbc =
       get_buffer_size_full_sm_tbc_multibit_programmable_bootstrap<Torus>(
           polynomial_size);
-  uint64_t partial_dm =
+  uint64_t partial_sm_tbc =
       get_buffer_size_partial_sm_tbc_multibit_programmable_bootstrap<Torus>(
           polynomial_size);
-  uint64_t minimum_dm = 0;
+  uint64_t minimum_sm_tbc = 0;
   if (supports_dsm)
-    minimum_dm =
+    minimum_sm_tbc =
         get_buffer_size_sm_dsm_plus_tbc_multibit_programmable_bootstrap<Torus>(
             polynomial_size);
+
+  uint64_t full_dm = full_sm_tbc;
+  uint64_t partial_dm = full_sm_tbc - partial_sm_tbc;
 
   auto d_mem = buffer->d_mem_acc_tbc;
   auto buffer_fft = buffer->global_accumulator_fft;
@@ -348,16 +351,16 @@ __host__ void host_tbc_multi_bit_programmable_bootstrap(
   config.numAttrs = 1;
   config.stream = stream;
 
-  if (max_shared_memory < partial_dm + minimum_dm) {
-    config.dynamicSmemBytes = minimum_dm;
+  if (max_shared_memory < partial_dm + minimum_sm_tbc) {
+    config.dynamicSmemBytes = minimum_sm_tbc;
     check_cuda_error(cudaLaunchKernelEx(
         &config, device_multi_bit_programmable_bootstrap<Torus, params, NOSM>,
         lwe_array_out, lwe_output_indexes, lut_vector, lut_vector_indexes,
         lwe_array_in, lwe_input_indexes, bootstrapping_key, keybundle_buffer,
         buffer_fft, lwe_dimension, glwe_dimension, polynomial_size,
         grouping_factor, base_log, level_count, d_mem, full_dm, supports_dsm));
-  } else if (max_shared_memory < full_dm + minimum_dm) {
-    config.dynamicSmemBytes = partial_dm + minimum_dm;
+  } else if (max_shared_memory < full_dm + minimum_sm_tbc) {
+    config.dynamicSmemBytes = partial_sm_tbc + minimum_sm_tbc;
     check_cuda_error(cudaLaunchKernelEx(
         &config,
         device_multi_bit_programmable_bootstrap<Torus, params, PARTIALSM>,
@@ -367,7 +370,7 @@ __host__ void host_tbc_multi_bit_programmable_bootstrap(
         grouping_factor, base_log, level_count, d_mem, partial_dm,
         supports_dsm));
   } else {
-    config.dynamicSmemBytes = full_dm + minimum_dm;
+    config.dynamicSmemBytes = full_sm_tbc + minimum_sm_tbc;
     check_cuda_error(cudaLaunchKernelEx(
         &config, device_multi_bit_programmable_bootstrap<Torus, params, FULLSM>,
         lwe_array_out, lwe_output_indexes, lut_vector, lut_vector_indexes,

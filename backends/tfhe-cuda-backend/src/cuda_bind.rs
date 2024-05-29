@@ -318,6 +318,7 @@ extern "C" {
         max_shared_memory: u32,
         gpu_offset: u32,
         lwe_chunk_size: u32,
+        gpu_offset: u32,
     );
 
     /// This cleanup function frees the data for the multi-bit PBS on GPU

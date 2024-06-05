@@ -325,14 +325,22 @@ __host__ void host_integer_sum_ciphertexts_vec_kb(
           streams[0], gpu_indexes[0],
           luts_message_carry->get_lut_indexes(message_count), 1, carry_count);
 
-    cuda_synchronize_stream(streams[0], gpu_indexes[0]);
+    auto active_gpu_count = get_active_gpu_count(total_count, gpu_count);
+    for (uint i = 0; i < active_gpu_count; i++) {
+      cuda_synchronize_stream(streams[i], gpu_indexes[i]);
+    }
     /// Apply KS to go from a big LWE dimension to a small LWE dimension
-    execute_keyswitch(streams, gpu_indexes, gpu_count, small_lwe_vector,
-                      lwe_indexes_in, new_blocks, lwe_indexes_in, ksks,
-                      polynomial_size * glwe_dimension, lwe_dimension,
-                      mem_ptr->params.ks_base_log, mem_ptr->params.ks_level,
-                      message_count, false);
+    execute_keyswitch<Torus>(streams, gpu_indexes, gpu_count, small_lwe_vector,
+                             lwe_indexes_in, new_blocks, lwe_indexes_in, ksks,
+                             polynomial_size * glwe_dimension, lwe_dimension,
+                             mem_ptr->params.ks_base_log,
+                             mem_ptr->params.ks_level, message_count, false);
 
+    /// Here we need to synchronize the streams because the keyswitch and PBS
+    /// do not operate on the same number of inputs
+    for (uint i = 0; i < active_gpu_count; i++) {
+      cuda_synchronize_stream(streams[i], gpu_indexes[i]);
+    }
     /// Apply PBS to apply a LUT, reduce the noise and go from a small LWE
     /// dimension to a big LWE dimension
     execute_pbs<Torus>(streams, gpu_indexes, gpu_count, new_blocks,
@@ -344,7 +352,6 @@ __host__ void host_integer_sum_ciphertexts_vec_kb(
                        mem_ptr->params.grouping_factor, total_count, 2, 0,
                        max_shared_memory, mem_ptr->params.pbs_type, false);
     /// Synchronize all GPUs
-    auto active_gpu_count = get_active_gpu_count(total_count, gpu_count);
     for (uint i = 0; i < active_gpu_count; i++) {
       cuda_synchronize_stream(streams[i], gpu_indexes[i]);
     }

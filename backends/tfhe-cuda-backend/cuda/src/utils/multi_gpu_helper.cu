@@ -2,7 +2,7 @@
 #include "helper.h"
 #include <mutex>
 
-bool p2pEnabled = false;
+bool p2p_enabled = false;
 
 int cuda_setup_multi_gpu() {
   int num_gpus = cuda_get_number_of_gpus();
@@ -15,8 +15,8 @@ int cuda_setup_multi_gpu() {
       check_cuda_error(
           cudaDeviceCanAccessPeer(&has_peer_access_to_device_0, i, 0));
       if (has_peer_access_to_device_0) {
-        if (!p2pEnabled) {
-          p2pEnabled = true;
+        if (!p2p_enabled) {
+            p2p_enabled = true;
           cudaMemPool_t mempool;
           cudaMemAccessDesc desc = {};
           // Enable P2P Access and mempool access
@@ -37,6 +37,7 @@ int cuda_setup_multi_gpu() {
       }
     }
   }
+  printf("num used gpus: %d, p2p enabled: %d", num_used_gpus, p2p_enabled);
   return num_used_gpus;
 }
 
@@ -44,8 +45,8 @@ void cuda_cleanup_multi_gpu() {
   int num_gpus = cuda_get_number_of_gpus();
   if (num_gpus == 0)
     PANIC("GPU error: the number of GPUs should be > 0.")
-  if (p2pEnabled) {
-    p2pEnabled = false;
+  if (p2p_enabled) {
+      p2p_enabled = false;
     if (num_gpus > 1) {
       int has_peer_access_to_device_0;
       for (int i = 1; i < num_gpus; i++) {

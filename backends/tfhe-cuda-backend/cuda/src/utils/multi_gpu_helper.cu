@@ -10,13 +10,13 @@ int cuda_setup_multi_gpu() {
     PANIC("GPU error: the number of GPUs should be > 0.")
   int num_used_gpus = 1;
   if (num_gpus > 1) {
-    int has_peer_access_to_device_0;
-    for (int i = 1; i < num_gpus; i++) {
-      check_cuda_error(
-          cudaDeviceCanAccessPeer(&has_peer_access_to_device_0, i, 0));
-      if (has_peer_access_to_device_0) {
-        if (!p2p_enabled) {
-            p2p_enabled = true;
+    if (!p2p_enabled) {
+      p2p_enabled = true;
+      int has_peer_access_to_device_0;
+      for (int i = 1; i < num_gpus; i++) {
+        check_cuda_error(
+            cudaDeviceCanAccessPeer(&has_peer_access_to_device_0, i, 0));
+        if (has_peer_access_to_device_0) {
           cudaMemPool_t mempool;
           cudaMemAccessDesc desc = {};
           // Enable P2P Access and mempool access
@@ -30,10 +30,21 @@ int cuda_setup_multi_gpu() {
           desc.flags = cudaMemAccessFlagsProtReadWrite;
           check_cuda_error(
               cudaMemPoolSetAccess(mempool, &desc, 1 /* numDescs */));
+          num_used_gpus += 1;
+        } else {
+          break;
         }
-        num_used_gpus += 1;
-      } else {
-        break;
+      }
+    } else {
+      int has_peer_access_to_device_0;
+      for (int i = 1; i < num_gpus; i++) {
+        check_cuda_error(
+            cudaDeviceCanAccessPeer(&has_peer_access_to_device_0, i, 0));
+        if (has_peer_access_to_device_0) {
+          num_used_gpus += 1;
+        } else {
+          break;
+        }
       }
     }
   }
@@ -46,7 +57,7 @@ void cuda_cleanup_multi_gpu() {
   if (num_gpus == 0)
     PANIC("GPU error: the number of GPUs should be > 0.")
   if (p2p_enabled) {
-      p2p_enabled = false;
+    p2p_enabled = false;
     if (num_gpus > 1) {
       int has_peer_access_to_device_0;
       for (int i = 1; i < num_gpus; i++) {

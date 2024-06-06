@@ -10,9 +10,7 @@ use crate::integer::server_key::radix_parallel::tests_unsigned::{
     CpuFunctionExecutor,
 };
 use crate::integer::tests::create_parametrized_test;
-use crate::integer::{
-    BooleanBlock, IntegerKeyKind, RadixClientKey, ServerKey, SignedRadixCiphertext,
-};
+use crate::integer::{BooleanBlock, IntegerKeyKind, RadixCiphertext, RadixClientKey, ServerKey, SignedRadixCiphertext};
 #[cfg(tarpaulin)]
 use crate::shortint::parameters::coverage_parameters::*;
 use crate::shortint::parameters::*;
@@ -52,14 +50,13 @@ where
     signed_unchecked_add_test(param, executor);
 }
 
-fn signed_unchecked_overflowing_add_test_case<P, F>(param: P, signed_overflowing_add: F)
+pub(crate) fn signed_unchecked_overflowing_add_test_case<P, T>(param: P, mut executor: T)
 where
     P: Into<PBSParameters>,
-    F: for<'a> Fn(
-        &'a ServerKey,
-        &'a SignedRadixCiphertext,
-        &'a SignedRadixCiphertext,
-    ) -> (SignedRadixCiphertext, BooleanBlock),
+    T: for<'a> FunctionExecutor<
+        (&'a SignedRadixCiphertext, &'a SignedRadixCiphertext),
+        (SignedRadixCiphertext, BooleanBlock),
+    >,
 {
     let param = param.into();
     let nb_tests = nb_tests_for_params(param);
@@ -67,10 +64,14 @@ where
     let cks = RadixClientKey::from((cks, NB_CTXT));
 
     sks.set_deterministic_pbs_execution(true);
+    let sks = Arc::new(sks);
 
     let mut rng = rand::thread_rng();
 
     let modulus = (cks.parameters().message_modulus().0.pow(NB_CTXT as u32) / 2) as i64;
+
+    executor.setup(&cks, sks.clone());
+
     let hardcoded_values = [
         (-modulus, -1),
         (modulus - 1, 1),
@@ -79,9 +80,10 @@ where
     ];
     for (clear_0, clear_1) in hardcoded_values {
         let ctxt_0 = cks.encrypt_signed(clear_0);
+        let ctxt_1 = cks.encrypt_signed(clear_1);
 
         let (ct_res, result_overflowed) =
-            sks.signed_overflowing_scalar_add_parallelized(&ctxt_0, clear_1);
+            executor.execute((&ctxt_0, &ctxt_1));
         let (expected_result, expected_overflowed) =
             signed_overflowing_add_under_modulus(clear_0, clear_1, modulus);
 
@@ -109,8 +111,8 @@ where
         let ctxt_0 = cks.encrypt_signed(clear_0);
         let ctxt_1 = cks.encrypt_signed(clear_1);
 
-        let (ct_res, result_overflowed) = signed_overflowing_add(&sks, &ctxt_0, &ctxt_1);
-        let (tmp_ct, tmp_o) = signed_overflowing_add(&sks, &ctxt_0, &ctxt_1);
+        let (ct_res, result_overflowed) = executor.execute((&ctxt_0, &ctxt_1));
+        let (tmp_ct, tmp_o) = executor.execute((&ctxt_0, &ctxt_1));
         assert!(ct_res.block_carries_are_empty());
         assert_eq!(ct_res, tmp_ct, "Failed determinism check");
         assert_eq!(tmp_o, result_overflowed, "Failed determinism check");
@@ -145,7 +147,7 @@ where
         let a: SignedRadixCiphertext = sks.create_trivial_radix(clear_0, NB_CTXT);
         let b: SignedRadixCiphertext = sks.create_trivial_radix(clear_1, NB_CTXT);
 
-        let (encrypted_result, encrypted_overflow) = signed_overflowing_add(&sks, &a, &b);
+        let (encrypted_result, encrypted_overflow) = executor.execute((&a, &b));
 
         let (expected_result, expected_overflowed) =
             signed_overflowing_add_under_modulus(clear_0, clear_1, modulus);
@@ -177,7 +179,8 @@ where
      -> (SignedRadixCiphertext, BooleanBlock) {
         sks.unchecked_signed_overflowing_add_or_sub(lhs, rhs, SignedOperation::Addition)
     };
-    signed_unchecked_overflowing_add_test_case(param, func);
+    let executor = CpuFunctionExecutor::new(func);
+    signed_unchecked_overflowing_add_test_case(param, executor);
 }
 
 fn integer_signed_unchecked_overflowing_add_parallelized<P>(param: P)

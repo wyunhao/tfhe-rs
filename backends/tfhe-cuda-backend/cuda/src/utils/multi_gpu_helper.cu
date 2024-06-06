@@ -12,6 +12,7 @@ int cuda_setup_multi_gpu() {
   if (num_gpus > 1) {
     if (!p2p_enabled) {
       p2p_enabled = true;
+      printf("Enable p2p\n");
       int has_peer_access_to_device_0;
       for (int i = 1; i < num_gpus; i++) {
         check_cuda_error(
@@ -36,6 +37,7 @@ int cuda_setup_multi_gpu() {
         }
       }
     } else {
+      printf("Don't enable p2p again\n");
       int has_peer_access_to_device_0;
       for (int i = 1; i < num_gpus; i++) {
         check_cuda_error(
@@ -48,39 +50,8 @@ int cuda_setup_multi_gpu() {
       }
     }
   }
-  printf("num used gpus: %d, p2p enabled: %d", num_used_gpus, p2p_enabled);
+  printf("num used gpus: %d, p2p enabled: %d\n", num_used_gpus, p2p_enabled);
   return num_used_gpus;
-}
-
-void cuda_cleanup_multi_gpu() {
-  int num_gpus = cuda_get_number_of_gpus();
-  if (num_gpus == 0)
-    PANIC("GPU error: the number of GPUs should be > 0.")
-  if (p2p_enabled) {
-    p2p_enabled = false;
-    if (num_gpus > 1) {
-      int has_peer_access_to_device_0;
-      for (int i = 1; i < num_gpus; i++) {
-        check_cuda_error(
-            cudaDeviceCanAccessPeer(&has_peer_access_to_device_0, i, 0));
-        if (has_peer_access_to_device_0) {
-          //// Disable access to memory pool
-          cudaMemPool_t mempool;
-          cudaMemAccessDesc desc = {};
-          cudaDeviceGetDefaultMemPool(&mempool, 0);
-          desc.location.type = cudaMemLocationTypeDevice;
-          desc.location.id = i;
-          desc.flags = cudaMemAccessFlagsProtNone;
-          cudaMemPoolSetAccess(mempool, &desc, 1 /* numDescs */);
-          //  Disable P2P Access
-          cudaSetDevice(i);
-          cudaDeviceDisablePeerAccess(0);
-        } else {
-          break;
-        }
-      }
-    }
-  }
 }
 
 int get_active_gpu_count(int num_inputs, int gpu_count) {

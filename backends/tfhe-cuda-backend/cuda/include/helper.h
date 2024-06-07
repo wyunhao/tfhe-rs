@@ -1,6 +1,8 @@
 #ifndef HELPER_H
 #define HELPER_H
+#include <mutex>
 
+extern std::mutex m;
 extern bool p2p_enabled;
 
 extern "C" {

@@ -1,7 +1,7 @@
 #include "device.h"
 #include "helper.h"
-#include <mutex>
 
+std::mutex m;
 bool p2p_enabled = false;
 
 int cuda_setup_multi_gpu() {
@@ -10,6 +10,7 @@ int cuda_setup_multi_gpu() {
     PANIC("GPU error: the number of GPUs should be > 0.")
   int num_used_gpus = 1;
   if (num_gpus > 1) {
+    m.lock();
     if (!p2p_enabled) {
       p2p_enabled = true;
       int has_peer_access_to_device_0;
@@ -46,6 +47,7 @@ int cuda_setup_multi_gpu() {
         }
       }
     }
+    m.unlock();
   }
   return num_used_gpus;
 }

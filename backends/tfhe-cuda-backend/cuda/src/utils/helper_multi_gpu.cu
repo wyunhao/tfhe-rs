@@ -101,3 +101,56 @@ int get_num_inputs_on_gpu(int total_num_inputs, int gpu_index, int gpu_count) {
   }
   return num_inputs;
 }
+
+/// Load an array residing on one GPU to all active gpus
+/// and split the array among them
+template <typename Torus>
+void multi_gpu_dispatch(cudaStream_t *streams, uint32_t *gpu_indexes,
+                        uint32_t gpu_count, std::vector<Torus *> &dest,
+                        Torus *src, uint32_t num_inputs, uint32_t elements_per_input) {
+
+    auto active_gpu_count = get_active_gpu_count(num_inputs, gpu_count);
+#pragma omp parallel for num_threads(active_gpu_count)
+    for (uint i = 0; i < active_gpu_count; i++) {
+        auto gpu_len = get_num_inputs_on_gpu(num_inputs, i, gpu_count) * elements_per_input;
+        Torus *array = (Torus *)cuda_malloc_async(gpu_len * sizeof(Torus), streams[i], gpu_indexes[i]);
+        check_cuda_error(cuda_memcpy_async_gpu_to_gpu(
+                array, src + get_gpu_offset(num_inputs, i, gpu_count) * elements_per_input,
+                gpu_len * sizeof(Torus),
+                streams[i], gpu_indexes[i]));
+        cuda_synchronize_stream(streams[i], gpu_indexes[i]);
+        dest.push_back(array);
+    }
+}
+
+/// Copy data from multiple GPUs back to GPU 0
+template <typename Torus>
+void multi_gpu_gather(cudaStream_t *streams, uint32_t *gpu_indexes,
+                      uint32_t gpu_count, Torus *dest, std::vector<Torus *> src,
+                      uint32_t num_inputs, uint32_t elements_per_input) {
+
+    auto active_gpu_count = get_active_gpu_count(num_inputs, gpu_count);
+#pragma omp parallel for num_threads(active_gpu_count)
+    for (uint i = 0; i < active_gpu_count; i++) {
+        auto gpu_len = get_num_inputs_on_gpu(num_inputs, i, gpu_count) * elements_per_input;
+        check_cuda_error(cuda_memcpy_async_gpu_to_gpu(
+                dest[get_gpu_offset(num_inputs, i, gpu_count) * elements_per_input],
+                src[i],
+                gpu_len * sizeof(Torus),
+                streams[i], gpu_indexes[i]));
+        cuda_synchronize_stream(streams[i], gpu_indexes[i]);
+    }
+}
+
+template <typename Torus>
+void multi_gpu_release(cudaStream_t *streams, uint32_t *gpu_indexes,
+                       uint32_t gpu_count, std::vector<Torus *> vec,
+                       uint32_t num_inputs) {
+
+    auto active_gpu_count = get_active_gpu_count(num_inputs, gpu_count);
+#pragma omp parallel for num_threads(active_gpu_count)
+    for (uint i = 0; i < active_gpu_count; i++) {
+        check_cuda_error(cuda_drop_asyc(vec[i], streams[i], gpu_indexes[i]));
+        cuda_synchronize_stream(streams[i], gpu_indexes[i]);
+    }
+}

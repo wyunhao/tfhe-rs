@@ -369,6 +369,7 @@ __host__ bool supports_thread_block_clusters_on_classic_programmable_bootstrap(
     uint32_t num_samples, uint32_t glwe_dimension, uint32_t polynomial_size,
     uint32_t level_count, uint32_t max_shared_memory) {
 
+    return false;
   if (!cuda_check_support_thread_block_clusters() || num_samples > 128)
     return false;
 

@@ -7,7 +7,7 @@ void programmable_bootstrap_classical_setup(
     uint64_t **lwe_sk_out_array, double **d_fourier_bsk_array,
     uint64_t **plaintexts, uint64_t **d_lut_pbs_identity,
     uint64_t **d_lut_pbs_indexes, uint64_t **d_lwe_ct_in_array,
-    uint64_t **d_lwe_input_indexes, uint64_t **d_lwe_ct_out_array,
+    uint64_t **d_lwe_input_indexes, uint64_t **d_lwe_ct_out_array_1, uint64_t **d_lwe_ct_out_array_2,
     uint64_t **d_lwe_output_indexes, int lwe_dimension, int glwe_dimension,
     int polynomial_size, DynamicDistribution lwe_noise_distribution,
     DynamicDistribution glwe_noise_distribution, int pbs_base_log,
@@ -70,7 +70,11 @@ void programmable_bootstrap_classical_setup(
                     stream, gpu_index);
 
   // Input and output LWEs
-  *d_lwe_ct_out_array =
+  *d_lwe_ct_out_array_1 =
+          (uint64_t *)cuda_malloc_async((glwe_dimension * polynomial_size + 1) *
+                                        number_of_inputs * sizeof(uint64_t),
+                                        stream, gpu_index);
+  *d_lwe_ct_out_array_2 =
       (uint64_t *)cuda_malloc_async((glwe_dimension * polynomial_size + 1) *
                                         number_of_inputs * sizeof(uint64_t),
                                     stream, gpu_index);
@@ -109,7 +113,7 @@ void programmable_bootstrap_classical_teardown(
     uint64_t *lwe_sk_out_array, double *d_fourier_bsk_array,
     uint64_t *plaintexts, uint64_t *d_lut_pbs_identity,
     uint64_t *d_lut_pbs_indexes, uint64_t *d_lwe_ct_in_array,
-    uint64_t *d_lwe_input_indexes, uint64_t *d_lwe_ct_out_array,
+    uint64_t *d_lwe_input_indexes, uint64_t *d_lwe_ct_out_array_1, uint64_t *d_lwe_ct_out_array_2,
     uint64_t *d_lwe_output_indexes) {
   cuda_synchronize_stream(stream, gpu_index);
 
@@ -121,7 +125,8 @@ void programmable_bootstrap_classical_teardown(
   cuda_drop_async(d_lut_pbs_identity, stream, gpu_index);
   cuda_drop_async(d_lut_pbs_indexes, stream, gpu_index);
   cuda_drop_async(d_lwe_ct_in_array, stream, gpu_index);
-  cuda_drop_async(d_lwe_ct_out_array, stream, gpu_index);
+  cuda_drop_async(d_lwe_ct_out_array_1, stream, gpu_index);
+  cuda_drop_async(d_lwe_ct_out_array_2, stream, gpu_index);
   cuda_drop_async(d_lwe_input_indexes, stream, gpu_index);
   cuda_drop_async(d_lwe_output_indexes, stream, gpu_index);
   cuda_synchronize_stream(stream, gpu_index);

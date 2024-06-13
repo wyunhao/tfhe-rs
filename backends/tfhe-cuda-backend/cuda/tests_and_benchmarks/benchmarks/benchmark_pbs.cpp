@@ -50,8 +50,8 @@ protected:
   uint64_t *d_lut_pbs_identity;
   uint64_t *d_lut_pbs_indexes;
   uint64_t *d_lwe_ct_in_array;
-  uint64_t *d_lwe_ct_out_array;
-  uint64_t *lwe_ct_out_array;
+  uint64_t *d_lwe_ct_out_array_1;
+  uint64_t *d_lwe_ct_out_array_2;
   uint64_t *d_lwe_input_indexes;
   uint64_t *d_lwe_output_indexes;
   int8_t *buffer;
@@ -82,7 +82,7 @@ public:
     programmable_bootstrap_multibit_setup(
         stream, gpu_index, &seed, &lwe_sk_in_array, &lwe_sk_out_array, &d_bsk,
         &plaintexts, &d_lut_pbs_identity, &d_lut_pbs_indexes,
-        &d_lwe_ct_in_array, &d_lwe_input_indexes, &d_lwe_ct_out_array,
+        &d_lwe_ct_in_array, &d_lwe_input_indexes, &d_lwe_ct_out_array_1, &d_lwe_ct_out_array_2,
         &d_lwe_output_indexes, lwe_dimension, glwe_dimension, polynomial_size,
         grouping_factor, lwe_modular_variance, glwe_modular_variance,
         pbs_base_log, pbs_level, message_modulus, carry_modulus,
@@ -94,7 +94,7 @@ public:
     programmable_bootstrap_multibit_teardown(
         stream, gpu_index, lwe_sk_in_array, lwe_sk_out_array, d_bsk, plaintexts,
         d_lut_pbs_identity, d_lut_pbs_indexes, d_lwe_ct_in_array,
-        d_lwe_input_indexes, d_lwe_ct_out_array, d_lwe_output_indexes);
+        d_lwe_input_indexes, d_lwe_ct_out_array_1, d_lwe_ct_out_array_2, d_lwe_output_indexes);
     cudaDeviceReset();
   }
 };
@@ -218,7 +218,7 @@ BENCHMARK_DEFINE_F(MultiBitBootstrap_u64, CgMultiBit)
   for (auto _ : st) {
     // Execute PBS
     cuda_cg_multi_bit_programmable_bootstrap_lwe_ciphertext_vector(
-        stream, gpu_index, d_lwe_ct_out_array, d_lwe_output_indexes,
+        stream, gpu_index, d_lwe_ct_out_array_1, d_lwe_output_indexes,
         d_lut_pbs_identity, d_lut_pbs_indexes, d_lwe_ct_in_array,
         d_lwe_input_indexes, d_bsk, (pbs_buffer<uint64_t, MULTI_BIT> *)buffer,
         lwe_dimension, glwe_dimension, polynomial_size, grouping_factor,
@@ -241,7 +241,7 @@ BENCHMARK_DEFINE_F(MultiBitBootstrap_u64, DefaultMultiBit)
   for (auto _ : st) {
     // Execute PBS
     cuda_multi_bit_programmable_bootstrap_lwe_ciphertext_vector(
-        stream, gpu_index, d_lwe_ct_out_array, d_lwe_output_indexes,
+        stream, gpu_index, d_lwe_ct_out_array_1, d_lwe_output_indexes,
         d_lut_pbs_identity, d_lut_pbs_indexes, d_lwe_ct_in_array,
         d_lwe_input_indexes, d_bsk, (pbs_buffer<uint64_t, MULTI_BIT> *)buffer,
         lwe_dimension, glwe_dimension, polynomial_size, grouping_factor,

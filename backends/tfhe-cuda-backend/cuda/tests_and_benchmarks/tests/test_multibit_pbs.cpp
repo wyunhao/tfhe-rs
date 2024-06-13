@@ -48,8 +48,10 @@ protected:
   uint64_t *d_lut_pbs_identity;
   uint64_t *d_lut_pbs_indexes;
   uint64_t *d_lwe_ct_in_array;
-  uint64_t *d_lwe_ct_out_array;
-  uint64_t *lwe_ct_out_array;
+  uint64_t *d_lwe_ct_out_array_1;
+  uint64_t *d_lwe_ct_out_array_2;
+  uint64_t *lwe_ct_out_array_1;
+  uint64_t *lwe_ct_out_array_2;
   uint64_t *d_lwe_input_indexes;
   uint64_t *d_lwe_output_indexes;
   int8_t *pbs_buffer;
@@ -85,7 +87,7 @@ public:
     programmable_bootstrap_multibit_setup(
         stream, gpu_index, &seed, &lwe_sk_in_array, &lwe_sk_out_array,
         &d_bsk_array, &plaintexts, &d_lut_pbs_identity, &d_lut_pbs_indexes,
-        &d_lwe_ct_in_array, &d_lwe_input_indexes, &d_lwe_ct_out_array,
+        &d_lwe_ct_in_array, &d_lwe_input_indexes, &d_lwe_ct_out_array_1, &d_lwe_ct_out_array_2,
         &d_lwe_output_indexes, lwe_dimension, glwe_dimension, polynomial_size,
         grouping_factor, lwe_noise_distribution, glwe_noise_distribution,
         pbs_base_log, pbs_level, message_modulus, carry_modulus,
@@ -96,20 +98,24 @@ public:
         polynomial_size, pbs_level, grouping_factor, number_of_inputs,
         cuda_get_max_shared_memory(gpu_index), true);
 
-    lwe_ct_out_array =
+    lwe_ct_out_array_1 =
         (uint64_t *)malloc((glwe_dimension * polynomial_size + 1) *
                            number_of_inputs * sizeof(uint64_t));
+    lwe_ct_out_array_2 =
+            (uint64_t *)malloc((glwe_dimension * polynomial_size + 1) *
+                               number_of_inputs * sizeof(uint64_t));
   }
 
   void TearDown() {
-    free(lwe_ct_out_array);
+    free(lwe_ct_out_array_1);
+    free(lwe_ct_out_array_2);
 
     cleanup_cuda_multi_bit_programmable_bootstrap(stream, gpu_index,
                                                   &pbs_buffer);
     programmable_bootstrap_multibit_teardown(
         stream, gpu_index, lwe_sk_in_array, lwe_sk_out_array, d_bsk_array,
         plaintexts, d_lut_pbs_identity, d_lut_pbs_indexes, d_lwe_ct_in_array,
-        d_lwe_input_indexes, d_lwe_ct_out_array, d_lwe_output_indexes);
+        d_lwe_input_indexes, d_lwe_ct_out_array_1, d_lwe_ct_out_array_2, d_lwe_output_indexes);
   }
 };
 
@@ -131,7 +137,7 @@ TEST_P(MultiBitProgrammableBootstrapTestPrimitives_u64,
                       (lwe_dimension + 1));
       // Execute PBS
       cuda_multi_bit_programmable_bootstrap_lwe_ciphertext_vector_64(
-          stream, gpu_index, (void *)d_lwe_ct_out_array,
+          stream, gpu_index, (void *)d_lwe_ct_out_array_1,
           (void *)d_lwe_output_indexes, (void *)d_lut_pbs_identity,
           (void *)d_lut_pbs_indexes, (void *)d_lwe_ct_in,
           (void *)d_lwe_input_indexes, (void *)d_bsk, pbs_buffer, lwe_dimension,
@@ -140,30 +146,54 @@ TEST_P(MultiBitProgrammableBootstrapTestPrimitives_u64,
           cuda_get_max_shared_memory(gpu_index), 0);
 
       // Copy result to the host memory
-      cuda_memcpy_async_to_cpu(lwe_ct_out_array, d_lwe_ct_out_array,
+      cuda_memcpy_async_to_cpu(lwe_ct_out_array_1, d_lwe_ct_out_array_1,
                                (glwe_dimension * polynomial_size + 1) *
                                    number_of_inputs * sizeof(uint64_t),
                                stream, gpu_index);
 
+      // Execute PBS
+      cuda_multi_bit_programmable_bootstrap_lwe_ciphertext_vector_64(
+              stream, gpu_index, (void *)d_lwe_ct_out_array_2,
+              (void *)d_lwe_output_indexes, (void *)d_lut_pbs_identity,
+              (void *)d_lut_pbs_indexes, (void *)d_lwe_ct_in,
+              (void *)d_lwe_input_indexes, (void *)d_bsk, pbs_buffer, lwe_dimension,
+              glwe_dimension, polynomial_size, grouping_factor, pbs_base_log,
+              pbs_level, number_of_inputs, 1, 0,
+              cuda_get_max_shared_memory(gpu_index), 0);
+
+      // Copy result to the host memory
+      cuda_memcpy_async_to_cpu(lwe_ct_out_array_2, d_lwe_ct_out_array_2,
+                               (glwe_dimension * polynomial_size + 1) *
+                               number_of_inputs * sizeof(uint64_t),
+                               stream, gpu_index);
+
       for (int j = 0; j < number_of_inputs; j++) {
-        uint64_t *result =
-            lwe_ct_out_array +
+        uint64_t *result_1 =
+            lwe_ct_out_array_1 +
             (ptrdiff_t)(j * (glwe_dimension * polynomial_size + 1));
+        uint64_t *result_2 =
+                lwe_ct_out_array_2 +
+                (ptrdiff_t)(j * (glwe_dimension * polynomial_size + 1));
         uint64_t plaintext = plaintexts[r * samples * number_of_inputs +
                                         s * number_of_inputs + j];
-        uint64_t decrypted = 0;
-        core_crypto_lwe_decrypt(&decrypted, result, lwe_sk_out,
+        uint64_t decrypted_1 = 0;
+        uint64_t decrypted_2 = 0;
+        core_crypto_lwe_decrypt(&decrypted_1, result_1, lwe_sk_out,
+                                glwe_dimension * polynomial_size);
+        core_crypto_lwe_decrypt(&decrypted_2, result_2, lwe_sk_out,
                                 glwe_dimension * polynomial_size);
 
-        EXPECT_NE(decrypted, plaintext)
+        EXPECT_NE(decrypted_1, plaintext)
+            << "Repetition: " << r << ", sample: " << s << ", input: " << j;
+        EXPECT_EQ(decrypted_1, decrypted_2)
             << "Repetition: " << r << ", sample: " << s << ", input: " << j;
 
         // The bit before the message
         uint64_t rounding_bit = delta >> 1;
 
         // Compute the rounding bit
-        uint64_t rounding = (decrypted & rounding_bit) << 1;
-        uint64_t decoded = (decrypted + rounding) / delta;
+        uint64_t rounding = (decrypted_1 & rounding_bit) << 1;
+        uint64_t decoded = (decrypted_1 + rounding) / delta;
         EXPECT_EQ(decoded, plaintext / delta)
             << "Repetition: " << r << ", sample: " << s << ", input: " << j;
       }

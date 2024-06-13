@@ -49,6 +49,7 @@ hex = "0.4.3"
 cbindgen = { version = "0.26.0", optional = true }
 
 [dependencies]
+concrete-cpu-noise-model = { path = "../../concrete/backends/concrete-cpu/noise-model" }
 concrete-csprng = { version = "0.4.0", path = "../concrete-csprng", features = [
     "generator_fallback",
     "parallel",

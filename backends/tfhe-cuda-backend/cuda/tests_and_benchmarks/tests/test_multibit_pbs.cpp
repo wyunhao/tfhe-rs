@@ -166,6 +166,7 @@ TEST_P(MultiBitProgrammableBootstrapTestPrimitives_u64,
                                (glwe_dimension * polynomial_size + 1) *
                                number_of_inputs * sizeof(uint64_t),
                                stream, gpu_index);
+      cuda_synchronize_stream(stream, gpu_index);
 
       for (int j = 0; j < number_of_inputs; j++) {
         uint64_t *result_1 =
@@ -208,8 +209,8 @@ TEST_P(MultiBitProgrammableBootstrapTestPrimitives_u64,
         (MultiBitProgrammableBootstrapTestParams){
             972, 1, 8192,
             new_gaussian_from_std_dev(sqrt(4.9571231961752025e-12)),
-            new_gaussian_from_std_dev(sqrt(9.9409770026944e-32)), 14, 3, 8, 8,
-            68, 4, 1, 1});
+            new_gaussian_from_std_dev(sqrt(9.9409770026944e-32)), 14, 2, 8, 8,
+            1000, 3, 1, 100});
 
 std::string printParamName(
     ::testing::TestParamInfo<MultiBitProgrammableBootstrapTestParams> p) {

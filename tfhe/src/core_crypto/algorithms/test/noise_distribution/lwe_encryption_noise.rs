@@ -273,48 +273,137 @@ create_parametrized_test!(random_noise_roundtrip {
     TEST_PARAMS_3_BITS_63_U64
 });
 
+use crate::shortint::parameters::multi_bit::p_fail_2_minus_64::ks_pbs::*;
 use crate::shortint::parameters::multi_bit::p_fail_2_minus_64::ks_pbs_gpu::*;
+
+fn multi_bit_variance(
+    n: LweDimension,
+    pol_size: PolynomialSize,
+    k: GlweDimension,
+    logb_bs: DecompositionBaseLog,
+    l_bs: DecompositionLevelCount,
+    grouping_factor: LweBskGroupingFactor,
+) -> Variance {
+    let y = (n.0 / grouping_factor.0) as f64;
+    let b_bs = 2.0f64.powi(logb_bs.0 as i32);
+    let l_bs = l_bs.0 as f64;
+    let pol_size = pol_size.0 as f64;
+    let k = k.0 as f64;
+
+    Variance(if grouping_factor.0 == 2 {
+        y * (pol_size * k * (2.93873587706e-39 * b_bs.powf(2.0 * l_bs) + 2.0)
+            + b_bs.powf(2.0 * l_bs)
+                * (1.65356574476e-30 * pol_size.powi(2) * b_bs.powi(2) * l_bs * (k + 1.0)
+                    + 32.0
+                        * pol_size
+                        * b_bs
+                        * l_bs
+                        * (2.0f64.powf(-0.051393557423 * pol_size * k + 5.3518627451)
+                            + 4.70197740329e-38)
+                        * (b_bs + 2.0)
+                        * (k + 1.0)
+                    - 1.17549435082e-38)
+            + 4.0)
+            / (96.0 * b_bs.powf(2.0 * l_bs))
+    } else if grouping_factor.0 == 3 {
+        y * (pol_size * k * (2.93873587706e-39 * b_bs.powf(2.0 * l_bs) + 2.0)
+            + b_bs.powf(2.0 * l_bs)
+                * (3.30713148953e-30 * pol_size.powi(2) * b_bs.powi(2) * l_bs * (k + 1.0)
+                    + 64.0
+                        * pol_size
+                        * b_bs
+                        * l_bs
+                        * (2.0f64.powf(-0.051393557423 * pol_size * k + 5.3518627451)
+                            + 4.70197740329e-38)
+                        * (b_bs + 2.0)
+                        * (k + 1.0)
+                    - 1.17549435082e-38)
+            + 4.0)
+            / (96.0 * b_bs.powf(2.0 * l_bs))
+    } else if grouping_factor.0 == 4 {
+        y * (pol_size * k * (2.93873587706e-39 * b_bs.powf(2.0 * l_bs) + 2.0)
+            + b_bs.powf(2.0 * l_bs)
+                * (6.61426297905e-30 * pol_size.powi(2) * b_bs.powi(2) * l_bs * (k + 1.0)
+                    + 128.0
+                        * pol_size
+                        * b_bs
+                        * l_bs
+                        * (2.0f64.powf(-0.051393557423 * pol_size * k + 5.3518627451)
+                            + 4.70197740329e-38)
+                        * (b_bs + 2.0)
+                        * (k + 1.0)
+                    - 1.17549435082e-38)
+            + 4.0)
+            / (96.0 * b_bs.powf(2.0 * l_bs))
+    } else {
+        unreachable!()
+    })
+}
 
 #[test]
 fn lwe_encrypt_multi_bit_pbs_decrypt_noise_distribution_custom_mod() {
     use concrete_cpu_noise_model::gaussian_noise::noise::blind_rotate::variance_blind_rotate;
     use concrete_cpu_noise_model::gaussian_noise::noise::multi_bit_blind_rotate::variance_multi_bit_blind_rotate;
     let param_array = [
+        // (
+        //     "PARAM_GPU_MULTI_BIT_GROUP_2_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64",
+        //     PARAM_GPU_MULTI_BIT_GROUP_2_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64,
+        // ),
+        // (
+        //     "PARAM_GPU_MULTI_BIT_GROUP_2_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64",
+        //     PARAM_GPU_MULTI_BIT_GROUP_2_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64,
+        // ),
+        // (
+        //     "PARAM_GPU_MULTI_BIT_GROUP_2_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64",
+        //     PARAM_GPU_MULTI_BIT_GROUP_2_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64,
+        // ),
+        // (
+        //     "PARAM_GPU_MULTI_BIT_GROUP_3_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64",
+        //     PARAM_GPU_MULTI_BIT_GROUP_3_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64,
+        // ),
+        // (
+        //     "PARAM_GPU_MULTI_BIT_GROUP_3_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64",
+        //     PARAM_GPU_MULTI_BIT_GROUP_3_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64,
+        // ),
+        // (
+        //     "PARAM_GPU_MULTI_BIT_GROUP_3_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64",
+        //     PARAM_GPU_MULTI_BIT_GROUP_3_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64,
+        // ),
+        // (
+        //     "PARAM_MULTI_BIT_GROUP_4_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64",
+        //     PARAM_MULTI_BIT_GROUP_4_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64,
+        // ),
+        // (
+        //     "PARAM_MULTI_BIT_GROUP_4_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64",
+        //     PARAM_MULTI_BIT_GROUP_4_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64,
+        // ),
+        // (
+        //     "PARAM_MULTI_BIT_GROUP_4_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64",
+        //     PARAM_MULTI_BIT_GROUP_4_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64,
+        // ),
         (
-            "PARAM_GPU_MULTI_BIT_GROUP_2_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64",
-            PARAM_GPU_MULTI_BIT_GROUP_2_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64,
+            "PARAM_MULTI_BIT_GROUP_2_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64",
+            PARAM_MULTI_BIT_GROUP_2_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64,
         ),
         (
-            "PARAM_GPU_MULTI_BIT_GROUP_2_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64",
-            PARAM_GPU_MULTI_BIT_GROUP_2_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64,
+            "PARAM_MULTI_BIT_GROUP_2_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64",
+            PARAM_MULTI_BIT_GROUP_2_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64,
         ),
         (
-            "PARAM_GPU_MULTI_BIT_GROUP_2_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64",
-            PARAM_GPU_MULTI_BIT_GROUP_2_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64,
+            "PARAM_MULTI_BIT_GROUP_2_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64",
+            PARAM_MULTI_BIT_GROUP_2_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64,
         ),
         (
-            "PARAM_GPU_MULTI_BIT_GROUP_3_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64",
-            PARAM_GPU_MULTI_BIT_GROUP_3_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64,
+            "PARAM_MULTI_BIT_GROUP_3_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64",
+            PARAM_MULTI_BIT_GROUP_3_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64,
         ),
         (
-            "PARAM_GPU_MULTI_BIT_GROUP_3_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64",
-            PARAM_GPU_MULTI_BIT_GROUP_3_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64,
+            "PARAM_MULTI_BIT_GROUP_3_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64",
+            PARAM_MULTI_BIT_GROUP_3_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64,
         ),
         (
-            "PARAM_GPU_MULTI_BIT_GROUP_3_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64",
-            PARAM_GPU_MULTI_BIT_GROUP_3_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64,
-        ),
-        (
-            "PARAM_MULTI_BIT_GROUP_4_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64",
-            PARAM_MULTI_BIT_GROUP_4_MESSAGE_1_CARRY_1_KS_PBS_GAUSSIAN_2M64,
-        ),
-        (
-            "PARAM_MULTI_BIT_GROUP_4_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64",
-            PARAM_MULTI_BIT_GROUP_4_MESSAGE_2_CARRY_2_KS_PBS_GAUSSIAN_2M64,
-        ),
-        (
-            "PARAM_MULTI_BIT_GROUP_4_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64",
-            PARAM_MULTI_BIT_GROUP_4_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64,
+            "PARAM_MULTI_BIT_GROUP_3_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64",
+            PARAM_MULTI_BIT_GROUP_3_MESSAGE_3_CARRY_3_KS_PBS_GAUSSIAN_2M64,
         ),
     ];
 
@@ -373,20 +462,29 @@ fn lwe_encrypt_multi_bit_pbs_decrypt_noise_distribution_custom_mod() {
 
         par_convert_standard_lwe_multi_bit_bootstrap_key_to_fourier(&bsk, &mut fbsk);
 
-        let fft_once_at_the_end = false;
+        let fft_once_at_the_end = true;
 
-        let expected_variance = Variance(variance_multi_bit_blind_rotate(
-            fbsk.input_lwe_dimension().0 as u64,
-            fbsk.glwe_size().to_glwe_dimension().0 as u64,
-            fbsk.polynomial_size().0 as u64,
-            decomp_base_log.0 as u64,
-            decomp_level_count.0 as u64,
-            64,
-            53,
-            glwe_noise_distribution.gaussian_variance().0,
-            grouping_factor.0 as u32,
-            fft_once_at_the_end,
-        ));
+        // let expected_variance = Variance(variance_multi_bit_blind_rotate(
+        //     fbsk.input_lwe_dimension().0 as u64,
+        //     fbsk.glwe_size().to_glwe_dimension().0 as u64,
+        //     fbsk.polynomial_size().0 as u64,
+        //     decomp_base_log.0 as u64,
+        //     decomp_level_count.0 as u64,
+        //     64,
+        //     53,
+        //     glwe_noise_distribution.gaussian_variance().0,
+        //     grouping_factor.0 as u32,
+        //     fft_once_at_the_end,
+        // ));
+
+        let expected_variance = multi_bit_variance(
+            bsk.input_lwe_dimension(),
+            bsk.polynomial_size(),
+            bsk.glwe_size().to_glwe_dimension(),
+            bsk.decomposition_base_log(),
+            bsk.decomposition_level_count(),
+            bsk.grouping_factor(),
+        );
 
         // let bsk = par_allocate_and_generate_new_lwe_bootstrap_key(
         //     &small_lwe_sk,
@@ -519,6 +617,20 @@ fn lwe_encrypt_multi_bit_pbs_decrypt_noise_distribution_custom_mod() {
                     tolerance threshold: {tolerance_threshold}, \n\
                     got variance: {measured_variance:?}, \n\
                     expected variance: {expected_variance:?}"
+                );
+
+                println!(
+                    "Measured std_dev_log2: {}",
+                    measured_variance.get_standard_dev().log2()
+                );
+                println!(
+                    "Expected std_dev_log2: {}",
+                    expected_variance.get_standard_dev().log2()
+                );
+                println!(
+                    "Measured is {} bits bigger",
+                    measured_variance.get_standard_dev().log2()
+                        - expected_variance.get_standard_dev().log2()
                 );
 
                 println!("FAIL ===========================================================")

@@ -4,9 +4,10 @@ use serde::{Deserialize, Serialize};
 use tfhe_versionable::{Versionize, VersionsDispatch};
 
 use crate::high_level_api::booleans::InnerBooleanVersionOwned;
+use crate::integer::ciphertext::{CompactCiphertextList, DataKind};
 use crate::integer::BooleanBlock;
 use crate::shortint::parameters::Degree;
-use crate::{CompactCiphertextList, CompressedFheBool, Error, FheBool};
+use crate::{CompactCiphertextList as HlCompactCiphertextList, CompressedFheBool, Error, FheBool};
 
 // Manual impl
 #[derive(Serialize, Deserialize)]
@@ -48,8 +49,16 @@ impl CompactFheBool {
     /// Expand to a [FheBool]
     ///
     /// See [CompactFheBool] example.
-    pub fn expand(&self) -> Result<FheBool, Error> {
-        let list = self.list.expand()?;
+    pub fn expand(mut self) -> Result<FheBool, Error> {
+        // This compact list might have been loaded from an homogenous compact list without type
+        // info
+        self.list
+            .info
+            .iter_mut()
+            .for_each(|info| *info = DataKind::Boolean);
+
+        let hl_list = HlCompactCiphertextList(self.list);
+        let list = hl_list.expand()?;
 
         let ct = list
             .get::<crate::integer::RadixCiphertext>(0)
@@ -72,8 +81,16 @@ pub struct CompactFheBoolList {
 
 impl CompactFheBoolList {
     /// Expand to a Vec<[FheBool]>
-    pub fn expand(&self) -> Result<Vec<FheBool>, Error> {
-        let list = self.list.expand()?;
+    pub fn expand(mut self) -> Result<Vec<FheBool>, Error> {
+        // This compact list might have been loaded from an homogenous compact list without type
+        // info
+        self.list
+            .info
+            .iter_mut()
+            .for_each(|info| *info = DataKind::Boolean);
+
+        let hl_list = HlCompactCiphertextList(self.list);
+        let list = hl_list.expand()?;
         let len = list.len();
 
         (0..len)

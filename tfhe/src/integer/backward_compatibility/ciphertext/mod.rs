@@ -32,7 +32,8 @@ pub struct CompactCiphertextListV0 {
 impl Upgrade<CompactCiphertextList> for CompactCiphertextListV0 {
     fn upgrade(self) -> Result<CompactCiphertextList, String> {
         println!("WARNING: Upgrading from old CompactCiphertextList with no sign information. Trying to guess type or defaulting to unsigned");
-        let radix_count = self.ct_list.ct_list.lwe_ciphertext_count().0;
+        let radix_count =
+            self.ct_list.ct_list.lwe_ciphertext_count().0 / self.num_blocks_per_integer;
         let info = vec![DataKind::Unsigned(self.num_blocks_per_integer); radix_count];
 
         Ok(CompactCiphertextList::from_raw_parts(self.ct_list, info))

@@ -33,6 +33,9 @@ jobs:
   publish_release:
     name: Publish Release
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
@@ -64,6 +67,7 @@ jobs:
           package: tfhe/pkg/package.json
           dry-run: ${{ inputs.dry_run }}
           tag: ${{ env.NPM_TAG }}
+          provenance: true
 
       - name: Publish web package as latest
         if: ${{ inputs.push_web_package && inputs.npm_latest_tag }}
@@ -72,6 +76,7 @@ jobs:
           token: ${{ secrets.NPM_TOKEN }}
           package: tfhe/pkg/package.json
           dry-run: ${{ inputs.dry_run }}
+          provenance: true
 
       - name: Build Node package
         if: ${{ inputs.push_node_package }}
@@ -89,6 +94,7 @@ jobs:
           package: tfhe/pkg/package.json
           dry-run: ${{ inputs.dry_run }}
           tag: ${{ env.NPM_TAG }}
+          provenance: true
 
       - name: Publish Node package as latest
         if: ${{ inputs.push_node_package && inputs.npm_latest_tag }}
@@ -97,6 +103,7 @@ jobs:
           token: ${{ secrets.NPM_TOKEN }}
           package: tfhe/pkg/package.json
           dry-run: ${{ inputs.dry_run }}
+          provenance: true
 
       - name: Slack Notification
         if: ${{ failure() }}

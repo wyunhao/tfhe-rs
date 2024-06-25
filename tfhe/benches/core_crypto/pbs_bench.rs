@@ -140,7 +140,7 @@ fn mem_optimized_pbs<Scalar: UnsignedTorus + CastInto<usize> + Serialize>(
     let mut bench_group = c.benchmark_group(bench_name);
     bench_group
         .sample_size(15)
-        .measurement_time(std::time::Duration::from_secs(60));
+        .measurement_time(std::time::Duration::from_secs(10));
 
     // Create the PRNG
     let mut seeder = new_seeder();
@@ -173,26 +173,37 @@ fn mem_optimized_pbs<Scalar: UnsignedTorus + CastInto<usize> + Serialize>(
             params.pbs_level.unwrap(),
         );
 
+        let count = 4;
+
         // Allocate a new LweCiphertext and encrypt our plaintext
-        let lwe_ciphertext_in: LweCiphertextOwned<Scalar> = allocate_and_encrypt_new_lwe_ciphertext(
-            &input_lwe_secret_key,
-            Plaintext(Scalar::ZERO),
-            params.lwe_noise_distribution.unwrap(),
+        let mut lwe_ciphertext_in = LweCiphertextListOwned::<Scalar>::new(
+            Scalar::ZERO,
+            input_lwe_secret_key.lwe_dimension().to_lwe_size(),
+            LweCiphertextCount(count),
             params.ciphertext_modulus.unwrap(),
+        );
+
+        encrypt_lwe_ciphertext_list(
+            &input_lwe_secret_key,
+            &mut lwe_ciphertext_in,
+            &PlaintextList::from_container(vec![Scalar::ZERO; count]),
+            params.lwe_noise_distribution.unwrap(),
             &mut encryption_generator,
         );
 
-        let accumulator = GlweCiphertext::new(
+        let accumulator = GlweCiphertextList::new(
             Scalar::ZERO,
             params.glwe_dimension.unwrap().to_glwe_size(),
             params.polynomial_size.unwrap(),
+            GlweCiphertextCount(count),
             params.ciphertext_modulus.unwrap(),
         );
 
         // Allocate the LweCiphertext to store the result of the PBS
-        let mut out_pbs_ct = LweCiphertext::new(
+        let mut out_pbs_ct = LweCiphertextList::new(
             Scalar::ZERO,
             output_lwe_secret_key.lwe_dimension().to_lwe_size(),
+            LweCiphertextCount(count),
             params.ciphertext_modulus.unwrap(),
         );
 
@@ -208,18 +219,18 @@ fn mem_optimized_pbs<Scalar: UnsignedTorus + CastInto<usize> + Serialize>(
                 fft,
             )
             .unwrap()
-            .unaligned_bytes_required(),
+            .unaligned_bytes_required()
+                * count,
         );
 
         let id = format!("{bench_name}::{name}");
         {
             bench_group.bench_function(&id, |b| {
                 b.iter(|| {
-                    programmable_bootstrap_lwe_ciphertext_mem_optimized(
-                        &lwe_ciphertext_in,
-                        &mut out_pbs_ct,
-                        &accumulator.as_view(),
-                        &fourier_bsk,
+                    fourier_bsk.as_view().batch_bootstrap(
+                        out_pbs_ct.as_mut_view(),
+                        lwe_ciphertext_in.as_view(),
+                        accumulator.as_view(),
                         fft,
                         buffers.stack(),
                     );

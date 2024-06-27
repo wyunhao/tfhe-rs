@@ -119,11 +119,11 @@ __device__ void mul_ggsw_glwe(Torus *accumulator, double2 *fft,
 template <typename Torus>
 void execute_pbs(
     cudaStream_t *streams, uint32_t *gpu_indexes, uint32_t gpu_count,
-    const LweArrayVariant<Torus> &lwe_array_out,
-    const LweArrayVariant<Torus> &lwe_output_indexes,
+    const std::vector<Torus *> &lwe_array_out,
+    const std::vector<Torus *> &lwe_output_indexes,
     std::vector<Torus *> lut_vec, std::vector<Torus *> lut_indexes_vec,
-    const LweArrayVariant<Torus> &lwe_array_in,
-    const LweArrayVariant<Torus> &lwe_input_indexes, void **bootstrapping_keys,
+    const std::vector<Torus *> &lwe_array_in,
+    const std::vector<Torus *> &lwe_input_indexes, void **bootstrapping_keys,
     std::vector<int8_t *> pbs_buffer, uint32_t glwe_dimension,
     uint32_t lwe_dimension, uint32_t polynomial_size, uint32_t base_log,
     uint32_t level_count, uint32_t grouping_factor,
@@ -148,12 +148,12 @@ void execute_pbs(
         // Use the macro to get the correct elements for the current iteration
         // Handles the case when the input/output are scattered through
         // different gpus and when it is not
-        Torus *current_lwe_array_out = GET_VARIANT_ELEMENT(lwe_array_out, i);
+        Torus *current_lwe_array_out = lwe_array_out[i];
         Torus *current_lwe_output_indexes =
-            GET_VARIANT_ELEMENT(lwe_output_indexes, i);
-        Torus *current_lwe_array_in = GET_VARIANT_ELEMENT(lwe_array_in, i);
+            lwe_output_indexes[i];
+        Torus *current_lwe_array_in = lwe_array_in[i];
         Torus *current_lwe_input_indexes =
-            GET_VARIANT_ELEMENT(lwe_input_indexes, i);
+            lwe_input_indexes[i];
 
         cuda_programmable_bootstrap_lwe_ciphertext_vector_32(
             streams[i], gpu_indexes[i], current_lwe_array_out,
@@ -183,12 +183,12 @@ void execute_pbs(
         // Use the macro to get the correct elements for the current iteration
         // Handles the case when the input/output are scattered through
         // different gpus and when it is not
-        Torus *current_lwe_array_out = GET_VARIANT_ELEMENT(lwe_array_out, i);
+        Torus *current_lwe_array_out = lwe_array_out[i];
         Torus *current_lwe_output_indexes =
-            GET_VARIANT_ELEMENT(lwe_output_indexes, i);
-        Torus *current_lwe_array_in = GET_VARIANT_ELEMENT(lwe_array_in, i);
+            lwe_output_indexes[i];
+        Torus *current_lwe_array_in = lwe_array_in[i];
         Torus *current_lwe_input_indexes =
-            GET_VARIANT_ELEMENT(lwe_input_indexes, i);
+            lwe_input_indexes[i];
 
         cuda_multi_bit_programmable_bootstrap_lwe_ciphertext_vector_64(
             streams[i], gpu_indexes[i], current_lwe_array_out,
@@ -208,12 +208,12 @@ void execute_pbs(
         // Use the macro to get the correct elements for the current iteration
         // Handles the case when the input/output are scattered through
         // different gpus and when it is not
-        Torus *current_lwe_array_out = GET_VARIANT_ELEMENT(lwe_array_out, i);
+        Torus *current_lwe_array_out = lwe_array_out[i];
         Torus *current_lwe_output_indexes =
-            GET_VARIANT_ELEMENT(lwe_output_indexes, i);
-        Torus *current_lwe_array_in = GET_VARIANT_ELEMENT(lwe_array_in, i);
+            lwe_output_indexes[i];
+        Torus *current_lwe_array_in = lwe_array_in[i];
         Torus *current_lwe_input_indexes =
-            GET_VARIANT_ELEMENT(lwe_input_indexes, i);
+            lwe_input_indexes[i];
 
         cuda_programmable_bootstrap_lwe_ciphertext_vector_64(
             streams[i], gpu_indexes[i], current_lwe_array_out,

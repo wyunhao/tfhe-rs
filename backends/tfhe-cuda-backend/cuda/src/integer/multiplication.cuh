@@ -347,22 +347,22 @@ __host__ void host_integer_sum_ciphertexts_vec_kb(
       /// After this keyswitch execution, we need to synchronize the streams
       /// because the keyswitch and PBS do not operate on the same number of
       /// inputs
-      execute_keyswitch<Torus>(streams, gpu_indexes, 1, small_lwe_vector,
-                               lwe_indexes_in, new_blocks, lwe_indexes_in, ksks,
-                               polynomial_size * glwe_dimension, lwe_dimension,
-                               mem_ptr->params.ks_base_log,
-                               mem_ptr->params.ks_level, message_count, false);
-
-      /// Apply PBS to apply a LUT, reduce the noise and go from a small LWE
-      /// dimension to a big LWE dimension
-      execute_pbs<Torus>(
-          streams, gpu_indexes, 1, new_blocks, lwe_indexes_out,
-          luts_message_carry->lut_vec, luts_message_carry->lut_indexes_vec,
-          small_lwe_vector, lwe_indexes_in, bsks, luts_message_carry->buffer,
-          glwe_dimension, lwe_dimension, polynomial_size,
-          mem_ptr->params.pbs_base_log, mem_ptr->params.pbs_level,
-          mem_ptr->params.grouping_factor, total_count, 2, 0, max_shared_memory,
-          mem_ptr->params.pbs_type, false);
+//      execute_keyswitch<Torus>(streams, gpu_indexes, 1, small_lwe_vector,
+//                               lwe_indexes_in, new_blocks, lwe_indexes_in, ksks,
+//                               polynomial_size * glwe_dimension, lwe_dimension,
+//                               mem_ptr->params.ks_base_log,
+//                               mem_ptr->params.ks_level, message_count, false);
+//
+//      /// Apply PBS to apply a LUT, reduce the noise and go from a small LWE
+//      /// dimension to a big LWE dimension
+//      execute_pbs<Torus>(
+//          streams, gpu_indexes, 1, new_blocks, lwe_indexes_out,
+//          luts_message_carry->lut_vec, luts_message_carry->lut_indexes_vec,
+//          small_lwe_vector, lwe_indexes_in, bsks, luts_message_carry->buffer,
+//          glwe_dimension, lwe_dimension, polynomial_size,
+//          mem_ptr->params.pbs_base_log, mem_ptr->params.pbs_level,
+//          mem_ptr->params.grouping_factor, total_count, 2, 0, max_shared_memory,
+//          mem_ptr->params.pbs_type, false);
     } else {
       cuda_synchronize_stream(streams[0], gpu_indexes[0]);
 

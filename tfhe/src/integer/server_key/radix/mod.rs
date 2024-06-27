@@ -756,4 +756,41 @@ impl ServerKey {
             self.propagate(ctxt, i);
         }
     }
+
+    /// Reverse he bits of the unsigned integer
+    ///
+    /// # Example
+    ///
+    ///```rust
+    /// use tfhe::integer::{gen_keys_radix, IntegerCiphertext};
+    /// use tfhe::shortint::parameters::PARAM_MESSAGE_2_CARRY_2_KS_PBS;
+    ///
+    /// let num_blocks = 4;
+    ///
+    /// // Generate the client key and the server key:
+    /// let (cks, sks) = gen_keys_radix(PARAM_MESSAGE_2_CARRY_2_KS_PBS, num_blocks);
+    ///
+    /// let msg = 0b10110100_u8;
+    ///
+    /// let ct = cks.encrypt(msg);
+    ///
+    /// // Compute homomorphically an addition:
+    /// let mut ct_res = sks.reverse_bits_unsigned(&ct);
+    ///
+    /// // Decrypt:
+    /// let res: u8 = cks.decrypt(&ct_res);
+    /// assert_eq!(msg.reverse_bits(), res);
+    /// ```
+    pub fn reverse_bits_unsigned(&self, ct: &RadixCiphertext) -> RadixCiphertext {
+        let lut = self.key.generate_lookup_table(|x| 2 * (x % 2) + x / 2);
+
+        let blocks = ct
+            .blocks
+            .iter()
+            .rev()
+            .map(|block| self.key.apply_lookup_table(block, &lut))
+            .collect();
+
+        RadixCiphertext { blocks }
+    }
 }

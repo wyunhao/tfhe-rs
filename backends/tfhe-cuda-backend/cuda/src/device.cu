@@ -32,31 +32,6 @@ void *cuda_malloc(uint64_t size, uint32_t gpu_index) {
   return ptr;
 }
 
-/// Allocates a size-byte array at the device memory. Tries to do it
-/// asynchronously.
-void *cuda_malloc_async(uint64_t size, cudaStream_t stream,
-                        uint32_t gpu_index) {
-  check_cuda_error(cudaSetDevice(gpu_index));
-  void *ptr;
-
-#ifndef CUDART_VERSION
-#error CUDART_VERSION Undefined!
-#elif (CUDART_VERSION >= 11020)
-  int support_async_alloc;
-  check_cuda_error(cudaDeviceGetAttribute(
-      &support_async_alloc, cudaDevAttrMemoryPoolsSupported, gpu_index));
-
-  if (support_async_alloc) {
-    check_cuda_error(cudaMallocAsync((void **)&ptr, size, stream));
-  } else {
-    check_cuda_error(cudaMalloc((void **)&ptr, size));
-  }
-#else
-  check_cuda_error(cudaMalloc((void **)&ptr, size));
-#endif
-  return ptr;
-}
-
 /// Check that allocation is valid
 void cuda_check_valid_malloc(uint64_t size, uint32_t gpu_index) {
   check_cuda_error(cudaSetDevice(gpu_index));

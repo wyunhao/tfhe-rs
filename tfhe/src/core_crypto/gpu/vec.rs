@@ -6,7 +6,7 @@ use std::collections::Bound::{Excluded, Included, Unbounded};
 use std::ffi::c_void;
 use std::marker::PhantomData;
 use tfhe_cuda_backend::cuda_bind::{
-    cuda_drop, cuda_malloc_async, cuda_memcpy_async_gpu_to_gpu, cuda_memcpy_async_to_cpu,
+    cuda_drop, cuda_malloc, cuda_memcpy_async_gpu_to_gpu, cuda_memcpy_async_to_cpu,
     cuda_memcpy_async_to_gpu, cuda_memset_async,
 };
 
@@ -43,11 +43,7 @@ impl<T: Numeric> CudaVec<T> {
     /// - `streams` __must__ be synchronized to guarantee computation has finished
     pub unsafe fn new_async(len: usize, streams: &CudaStreams, gpu_index: u32) -> Self {
         let size = len as u64 * std::mem::size_of::<T>() as u64;
-        let ptr = cuda_malloc_async(
-            size,
-            streams.ptr[gpu_index as usize],
-            streams.gpu_indexes[gpu_index as usize],
-        );
+        let ptr = cuda_malloc(size, streams.gpu_indexes[gpu_index as usize]);
         cuda_memset_async(
             ptr,
             0u64,
@@ -70,13 +66,7 @@ impl<T: Numeric> CudaVec<T> {
         let size = len as u64 * std::mem::size_of::<T>() as u64;
         let mut ptrs = Vec::with_capacity(streams.len());
         for &gpu_index in streams.gpu_indexes.iter() {
-            let ptr = unsafe {
-                cuda_malloc_async(
-                    size,
-                    streams.ptr[gpu_index as usize],
-                    streams.gpu_indexes[gpu_index as usize],
-                )
-            };
+            let ptr = unsafe { cuda_malloc(size, streams.gpu_indexes[gpu_index as usize]) };
             unsafe {
                 cuda_memset_async(
                     ptr,

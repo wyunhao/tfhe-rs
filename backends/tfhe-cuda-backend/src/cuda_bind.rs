@@ -9,8 +9,8 @@ extern "C" {
     /// Destroy the Cuda stream `v_stream`
     pub fn cuda_destroy_stream(stream: *mut c_void, gpu_index: u32);
 
-    /// Allocate `size` memory on GPU `gpu_index` asynchronously
-    pub fn cuda_malloc_async(size: u64, stream: *mut c_void, gpu_index: u32) -> *mut c_void;
+    /// Allocate `size` memory on GPU `gpu_index`
+    pub fn cuda_malloc(size: u64, gpu_index: u32) -> *mut c_void;
 
     /// Copy `size` memory asynchronously from `src` on GPU `gpu_index` to `dest` on CPU using
     /// the Cuda stream `v_stream`.

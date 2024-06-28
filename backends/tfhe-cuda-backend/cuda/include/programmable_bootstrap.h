@@ -210,17 +210,17 @@ template <typename Torus> struct pbs_buffer<Torus, PBS_TYPE::CLASSICAL> {
                        level_count * (glwe_dimension + 1);
         }
         // Otherwise, both kernels run all in shared memory
-        d_mem = (int8_t *)cuda_malloc_async(device_mem, stream, gpu_index);
+        d_mem = (int8_t *)cuda_malloc(device_mem, gpu_index);
 
-        global_accumulator_fft = (double2 *)cuda_malloc_async(
+        global_accumulator_fft = (double2 *)cuda_malloc(
             (glwe_dimension + 1) * level_count * input_lwe_ciphertext_count *
                 (polynomial_size / 2) * sizeof(double2),
-            stream, gpu_index);
+            gpu_index);
 
-        global_accumulator = (Torus *)cuda_malloc_async(
+        global_accumulator = (Torus *)cuda_malloc(
             (glwe_dimension + 1) * input_lwe_ciphertext_count *
                 polynomial_size * sizeof(Torus),
-            stream, gpu_index);
+            gpu_index);
       } break;
       case PBS_VARIANT::CG: {
         uint64_t full_sm =
@@ -243,12 +243,12 @@ template <typename Torus> struct pbs_buffer<Torus, PBS_TYPE::CLASSICAL> {
         }
 
         // Otherwise, both kernels run all in shared memory
-        d_mem = (int8_t *)cuda_malloc_async(device_mem, stream, gpu_index);
+        d_mem = (int8_t *)cuda_malloc(device_mem, gpu_index);
 
-        global_accumulator_fft = (double2 *)cuda_malloc_async(
+        global_accumulator_fft = (double2 *)cuda_malloc(
             (glwe_dimension + 1) * level_count * input_lwe_ciphertext_count *
                 polynomial_size / 2 * sizeof(double2),
-            stream, gpu_index);
+            gpu_index);
       } break;
 #if CUDA_ARCH >= 900
       case PBS_VARIANT::TBC: {
@@ -290,12 +290,12 @@ template <typename Torus> struct pbs_buffer<Torus, PBS_TYPE::CLASSICAL> {
         }
 
         // Otherwise, both kernels run all in shared memory
-        d_mem = (int8_t *)cuda_malloc_async(device_mem, stream, gpu_index);
+        d_mem = (int8_t *)cuda_malloc(device_mem, gpu_index);
 
-        global_accumulator_fft = (double2 *)cuda_malloc_async(
+        global_accumulator_fft = (double2 *)cuda_malloc(
             (glwe_dimension + 1) * level_count * input_lwe_ciphertext_count *
                 polynomial_size / 2 * sizeof(double2),
-            stream, gpu_index);
+            gpu_index);
       } break;
 #endif
       default:

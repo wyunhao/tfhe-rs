@@ -286,7 +286,7 @@ __host__ void scratch_programmable_bootstrap_amortized(
         get_buffer_size_programmable_bootstrap_amortized<Torus>(
             glwe_dimension, polynomial_size, input_lwe_ciphertext_count,
             max_shared_memory);
-    *pbs_buffer = (int8_t *)cuda_malloc_async(buffer_size, stream, gpu_index);
+    *pbs_buffer = (int8_t *)cuda_malloc(buffer_size, gpu_index);
     check_cuda_error(cudaGetLastError());
   }
 }

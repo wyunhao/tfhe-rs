@@ -217,35 +217,33 @@ template <typename Torus> struct pbs_buffer<Torus, PBS_TYPE::MULTI_BIT> {
     if (allocate_gpu_memory) {
       // Keybundle
       if (max_shared_memory < full_sm_keybundle)
-        d_mem_keybundle = (int8_t *)cuda_malloc_async(
-            num_blocks_keybundle * full_sm_keybundle, stream, gpu_index);
+        d_mem_keybundle = (int8_t *)cuda_malloc(
+            num_blocks_keybundle * full_sm_keybundle, gpu_index);
 
       switch (pbs_variant) {
       case PBS_VARIANT::CG:
         // Accumulator CG
         if (max_shared_memory < partial_sm_cg_accumulate)
-          d_mem_acc_cg = (int8_t *)cuda_malloc_async(
-              num_blocks_acc_cg * full_sm_cg_accumulate, stream, gpu_index);
+          d_mem_acc_cg = (int8_t *)cuda_malloc(
+              num_blocks_acc_cg * full_sm_cg_accumulate, gpu_index);
         else if (max_shared_memory < full_sm_cg_accumulate)
-          d_mem_acc_cg = (int8_t *)cuda_malloc_async(
-              num_blocks_acc_cg * partial_sm_cg_accumulate, stream, gpu_index);
+          d_mem_acc_cg = (int8_t *)cuda_malloc(
+              num_blocks_acc_cg * partial_sm_cg_accumulate, gpu_index);
         break;
       case PBS_VARIANT::DEFAULT:
         // Accumulator step one
         if (max_shared_memory < partial_sm_accumulate_step_one)
-          d_mem_acc_step_one = (int8_t *)cuda_malloc_async(
-              num_blocks_acc_step_one * full_sm_accumulate_step_one, stream,
-              gpu_index);
+          d_mem_acc_step_one = (int8_t *)cuda_malloc(
+              num_blocks_acc_step_one * full_sm_accumulate_step_one, gpu_index);
         else if (max_shared_memory < full_sm_accumulate_step_one)
-          d_mem_acc_step_one = (int8_t *)cuda_malloc_async(
-              num_blocks_acc_step_one * partial_sm_accumulate_step_one, stream,
+          d_mem_acc_step_one = (int8_t *)cuda_malloc(
+              num_blocks_acc_step_one * partial_sm_accumulate_step_one,
               gpu_index);
 
         // Accumulator step two
         if (max_shared_memory < full_sm_accumulate_step_two)
-          d_mem_acc_step_two = (int8_t *)cuda_malloc_async(
-              num_blocks_acc_step_two * full_sm_accumulate_step_two, stream,
-              gpu_index);
+          d_mem_acc_step_two = (int8_t *)cuda_malloc(
+              num_blocks_acc_step_two * full_sm_accumulate_step_two, gpu_index);
         break;
 #if CUDA_ARCH >= 900
       case TBC:
@@ -261,27 +259,25 @@ template <typename Torus> struct pbs_buffer<Torus, PBS_TYPE::MULTI_BIT> {
 
         // Accumulator TBC
         if (max_shared_memory < partial_sm_tbc_accumulate + minimum_sm_tbc)
-          d_mem_acc_tbc = (int8_t *)cuda_malloc_async(
-              num_blocks_acc_tbc * full_sm_tbc_accumulate, stream, gpu_index);
+          d_mem_acc_tbc = (int8_t *)cuda_malloc(
+              num_blocks_acc_tbc * full_sm_tbc_accumulate, gpu_index);
         else if (max_shared_memory < full_sm_tbc_accumulate + minimum_sm_tbc)
-          d_mem_acc_tbc = (int8_t *)cuda_malloc_async(
-              num_blocks_acc_tbc * partial_sm_tbc_accumulate, stream,
-              gpu_index);
+          d_mem_acc_tbc = (int8_t *)cuda_malloc(
+              num_blocks_acc_tbc * partial_sm_tbc_accumulate, gpu_index);
         break;
 #endif
       default:
         PANIC("Cuda error (PBS): unsupported implementation variant.")
       }
 
-      keybundle_fft = (double2 *)cuda_malloc_async(
+      keybundle_fft = (double2 *)cuda_malloc(
           num_blocks_keybundle * (polynomial_size / 2) * sizeof(double2),
-          stream, gpu_index);
-      global_accumulator = (Torus *)cuda_malloc_async(
-          num_blocks_acc_step_one * polynomial_size * sizeof(Torus), stream,
           gpu_index);
-      global_accumulator_fft = (double2 *)cuda_malloc_async(
+      global_accumulator = (Torus *)cuda_malloc(
+          num_blocks_acc_step_one * polynomial_size * sizeof(Torus), gpu_index);
+      global_accumulator_fft = (double2 *)cuda_malloc(
           num_blocks_acc_step_one * (polynomial_size / 2) * sizeof(double2),
-          stream, gpu_index);
+          gpu_index);
     }
   }
 

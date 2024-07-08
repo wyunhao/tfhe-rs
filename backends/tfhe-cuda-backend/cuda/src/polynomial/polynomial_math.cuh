@@ -12,7 +12,8 @@ __device__ T *get_chunk(T *data, int chunk_num, int chunk_size) {
 }
 
 template <typename FT, class params>
-__device__ void sub_polynomial(FT *result, FT *first, FT *second) {
+__device__ void sub_polynomial(FT *__restrict__ result, FT *__restrict__ first,
+                               FT *__restrict__ second) {
   int tid = threadIdx.x;
   for (int i = 0; i < params::opt; i++) {
     result[tid] = first[tid] - second[tid];
@@ -21,8 +22,9 @@ __device__ void sub_polynomial(FT *result, FT *first, FT *second) {
 }
 
 template <class params, typename T>
-__device__ void polynomial_product_in_fourier_domain(T *result, T *first,
-                                                     T *second) {
+__device__ void polynomial_product_in_fourier_domain(T *__restrict__ result,
+                                                     T *__restrict__ first,
+                                                     T *__restrict__ second) {
   int tid = threadIdx.x;
   for (int i = 0; i < params::opt / 2; i++) {
     result[tid] = first[tid] * second[tid];
@@ -39,9 +41,9 @@ __device__ void polynomial_product_in_fourier_domain(T *result, T *first,
 // If init_accumulator is set, assumes that result was not initialized and does
 // that with the outcome of first * second
 template <class params, typename T>
-__device__ void
-polynomial_product_accumulate_in_fourier_domain(T *result, T *first, T *second,
-                                                bool init_accumulator = false) {
+__device__ void polynomial_product_accumulate_in_fourier_domain(
+    T *__restrict__ result, T *__restrict__ first, T *second,
+    bool init_accumulator = false) {
   int tid = threadIdx.x;
   if (init_accumulator) {
     for (int i = 0; i < params::opt / 2; i++) {
@@ -59,10 +61,9 @@ polynomial_product_accumulate_in_fourier_domain(T *result, T *first, T *second,
 // If init_accumulator is set, assumes that result was not initialized and does
 // that with the outcome of first * second
 template <typename T, class params>
-__device__ void
-polynomial_product_accumulate_by_monomial(T *result, T *poly,
-                                          uint64_t monomial_degree,
-                                          bool init_accumulator = false) {
+__device__ void polynomial_product_accumulate_by_monomial(
+    T *__restrict__ result, T *__restrict__ poly, uint64_t monomial_degree,
+    bool init_accumulator = false) {
   // monomial_degree \in [0, 2 * params::degree)
   int full_cycles_count = monomial_degree / params::degree;
   int remainder_degrees = monomial_degree % params::degree;

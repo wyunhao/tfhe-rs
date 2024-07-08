@@ -18,11 +18,13 @@
 
 template <typename Torus, class params, sharedMemDegree SMD>
 __global__ void device_programmable_bootstrap_step_one(
-    Torus *lut_vector, Torus *lut_vector_indexes, Torus *lwe_array_in,
-    Torus *lwe_input_indexes, double2 *bootstrapping_key,
-    Torus *global_accumulator, double2 *global_accumulator_fft,
-    uint32_t lwe_iteration, uint32_t lwe_dimension, uint32_t polynomial_size,
-    uint32_t base_log, uint32_t level_count, int8_t *device_mem,
+    Torus *__restrict__ lut_vector, Torus *__restrict__ lut_vector_indexes,
+    Torus *__restrict__ lwe_array_in, Torus *__restrict__ lwe_input_indexes,
+    double2 *__restrict__ bootstrapping_key,
+    Torus *__restrict__ global_accumulator,
+    double2 *__restrict__ global_accumulator_fft, uint32_t lwe_iteration,
+    uint32_t lwe_dimension, uint32_t polynomial_size, uint32_t base_log,
+    uint32_t level_count, int8_t *device_mem,
     uint64_t device_memory_size_per_block, uint32_t gpu_offset) {
 
   // We use shared memory for the polynomials that are used often during the
@@ -129,11 +131,13 @@ __global__ void device_programmable_bootstrap_step_one(
 
 template <typename Torus, class params, sharedMemDegree SMD>
 __global__ void device_programmable_bootstrap_step_two(
-    Torus *lwe_array_out, Torus *lwe_output_indexes, Torus *lut_vector,
-    Torus *lut_vector_indexes, double2 *bootstrapping_key,
-    Torus *global_accumulator, double2 *global_accumulator_fft,
-    uint32_t lwe_iteration, uint32_t lwe_dimension, uint32_t polynomial_size,
-    uint32_t base_log, uint32_t level_count, int8_t *device_mem,
+    Torus *__restrict__ lwe_array_out, Torus *__restrict__ lwe_output_indexes,
+    Torus *__restrict__ lut_vector, Torus *__restrict__ lut_vector_indexes,
+    double2 *__restrict__ bootstrapping_key,
+    Torus *__restrict__ global_accumulator,
+    double2 *__restrict__ global_accumulator_fft, uint32_t lwe_iteration,
+    uint32_t lwe_dimension, uint32_t polynomial_size, uint32_t base_log,
+    uint32_t level_count, int8_t *device_mem,
     uint64_t device_memory_size_per_block, uint32_t gpu_offset) {
 
   // We use shared memory for the polynomials that are used often during the

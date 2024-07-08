@@ -11,7 +11,8 @@
  *  function compresses decomposed buffer into half size complex buffer for fft
  */
 template <class params>
-__device__ void real_to_complex_compressed(int16_t *src, double2 *dst) {
+__device__ void real_to_complex_compressed(int16_t *__restrict__ src,
+                                           double2 *__restrict__ dst) {
   int tid = threadIdx.x;
 #pragma unroll
   for (int i = 0; i < params::opt / 2; i++) {
@@ -22,7 +23,7 @@ __device__ void real_to_complex_compressed(int16_t *src, double2 *dst) {
 }
 
 template <typename T, int elems_per_thread, int block_size>
-__device__ void copy_polynomial(T *source, T *dst) {
+__device__ void copy_polynomial(T *__restrict__ source, T *__restrict__ dst) {
   int tid = threadIdx.x;
 #pragma unroll
   for (int i = 0; i < elems_per_thread; i++) {
@@ -41,9 +42,10 @@ __device__ void copy_polynomial(T *source, T *dst) {
  *  By default, it works on a single polynomial.
  */
 template <typename T, int elems_per_thread, int block_size>
-__device__ void divide_by_monomial_negacyclic_inplace(T *accumulator, T *input,
-                                                      uint32_t j, bool zeroAcc,
-                                                      uint32_t num_poly = 1) {
+__device__ void
+divide_by_monomial_negacyclic_inplace(T *__restrict__ accumulator,
+                                      T *__restrict__ input, uint32_t j,
+                                      bool zeroAcc, uint32_t num_poly = 1) {
   constexpr int degree = block_size * elems_per_thread;
   for (int z = 0; z < num_poly; z++) {
     T *accumulator_slice = (T *)accumulator + (ptrdiff_t)(z * degree);
@@ -92,7 +94,8 @@ __device__ void divide_by_monomial_negacyclic_inplace(T *accumulator, T *input,
  */
 template <typename T, int elems_per_thread, int block_size>
 __device__ void multiply_by_monomial_negacyclic_and_sub_polynomial(
-    T *acc, T *result_acc, uint32_t j, uint32_t num_poly = 1) {
+    T *__restrict__ acc, T *__restrict__ result_acc, uint32_t j,
+    uint32_t num_poly = 1) {
   constexpr int degree = block_size * elems_per_thread;
   for (int z = 0; z < num_poly; z++) {
     T *acc_slice = (T *)acc + (ptrdiff_t)(z * degree);
@@ -129,8 +132,8 @@ __device__ void multiply_by_monomial_negacyclic_and_sub_polynomial(
  *  By default, it works on a single polynomial.
  */
 template <typename T, int elems_per_thread, int block_size>
-__device__ void round_to_closest_multiple_inplace(T *rotated_acc, int base_log,
-                                                  int level_count,
+__device__ void round_to_closest_multiple_inplace(T *__restrict__ rotated_acc,
+                                                  int base_log, int level_count,
                                                   uint32_t num_poly = 1) {
   constexpr int degree = block_size * elems_per_thread;
   for (int z = 0; z < num_poly; z++) {
@@ -151,7 +154,8 @@ __device__ void round_to_closest_multiple_inplace(T *rotated_acc, int base_log,
 }
 
 template <typename Torus, class params>
-__device__ void add_to_torus(double2 *m_values, Torus *result,
+__device__ void add_to_torus(double2 *__restrict__ m_values,
+                             Torus *__restrict__ result,
                              bool init_torus = false) {
   Torus mx = (sizeof(Torus) == 4) ? UINT32_MAX : UINT64_MAX;
   int tid = threadIdx.x;
@@ -191,7 +195,8 @@ __device__ void add_to_torus(double2 *m_values, Torus *result,
 // k is the offset to find the body element / polynomial in the lwe_array_out /
 // accumulator
 template <typename Torus, class params>
-__device__ void sample_extract_body(Torus *lwe_array_out, Torus *accumulator,
+__device__ void sample_extract_body(Torus *__restrict__ lwe_array_out,
+                                    Torus *__restrict__ accumulator,
                                     uint32_t k) {
   // Set first coefficient of the accumulator as the body of the LWE sample
   lwe_array_out[k * params::degree] = accumulator[k * params::degree];
@@ -199,7 +204,8 @@ __device__ void sample_extract_body(Torus *lwe_array_out, Torus *accumulator,
 
 // Extracts the mask from num_poly polynomials individually
 template <typename Torus, class params>
-__device__ void sample_extract_mask(Torus *lwe_array_out, Torus *accumulator,
+__device__ void sample_extract_mask(Torus *__restrict__ lwe_array_out,
+                                    Torus *__restrict__ accumulator,
                                     uint32_t num_poly = 1) {
   for (int z = 0; z < num_poly; z++) {
     Torus *lwe_array_out_slice =

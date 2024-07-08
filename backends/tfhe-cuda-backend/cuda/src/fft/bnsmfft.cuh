@@ -22,7 +22,7 @@
  *     is replaced with:
  *     \zeta_j,k = exp(-i pi (2j-1)/2^k)
  */
-template <class params> __device__ void NSMFFT_direct(double2 *A) {
+template <class params> __device__ void NSMFFT_direct(double2 *__restrict__ A) {
 
   /* We don't make bit reverse here, since twiddles are already reversed
    *  Each thread is always in charge of "opt/2" pairs of coefficients,
@@ -320,7 +320,8 @@ template <class params> __device__ void NSMFFT_direct(double2 *A) {
 /*
  * negacyclic inverse fft
  */
-template <class params> __device__ void NSMFFT_inverse(double2 *A) {
+template <class params>
+__device__ void NSMFFT_inverse(double2 *__restrict__ A) {
 
   /* We don't make bit reverse here, since twiddles are already reversed
    *  Each thread is always in charge of "opt/2" pairs of coefficients,

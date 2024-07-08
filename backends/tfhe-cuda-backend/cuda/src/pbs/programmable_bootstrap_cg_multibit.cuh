@@ -19,14 +19,16 @@
 
 template <typename Torus, class params, sharedMemDegree SMD>
 __global__ void device_multi_bit_programmable_bootstrap_cg_accumulate(
-    Torus *lwe_array_out, Torus *lwe_output_indexes, Torus *lut_vector,
-    Torus *lut_vector_indexes, Torus *lwe_array_in, Torus *lwe_input_indexes,
-    double2 *keybundle_array, double2 *join_buffer, Torus *global_accumulator,
-    uint32_t lwe_dimension, uint32_t glwe_dimension, uint32_t polynomial_size,
-    uint32_t base_log, uint32_t level_count, uint32_t grouping_factor,
-    uint32_t lwe_offset, uint32_t lwe_chunk_size,
-    uint32_t keybundle_size_per_input, int8_t *device_mem,
-    uint64_t device_memory_size_per_block, uint32_t gpu_offset) {
+    Torus *__restrict__ lwe_array_out, Torus *__restrict__ lwe_output_indexes,
+    Torus *__restrict__ lut_vector, Torus *__restrict__ lut_vector_indexes,
+    Torus *__restrict__ lwe_array_in, Torus *__restrict__ lwe_input_indexes,
+    double2 *__restrict__ keybundle_array, double2 *__restrict__ join_buffer,
+    Torus *__restrict__ global_accumulator, uint32_t lwe_dimension,
+    uint32_t glwe_dimension, uint32_t polynomial_size, uint32_t base_log,
+    uint32_t level_count, uint32_t grouping_factor, uint32_t lwe_offset,
+    uint32_t lwe_chunk_size, uint32_t keybundle_size_per_input,
+    int8_t *device_mem, uint64_t device_memory_size_per_block,
+    uint32_t gpu_offset) {
 
   grid_group grid = this_grid();
 

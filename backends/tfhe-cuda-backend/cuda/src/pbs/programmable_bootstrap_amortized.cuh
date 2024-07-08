@@ -47,11 +47,12 @@ template <typename Torus, class params, sharedMemDegree SMD>
  * is not FULLSM
  */
 __global__ void device_programmable_bootstrap_amortized(
-    Torus *lwe_array_out, Torus *lwe_output_indexes, Torus *lut_vector,
-    Torus *lut_vector_indexes, Torus *lwe_array_in, Torus *lwe_input_indexes,
-    double2 *bootstrapping_key, int8_t *device_mem, uint32_t glwe_dimension,
-    uint32_t lwe_dimension, uint32_t polynomial_size, uint32_t base_log,
-    uint32_t level_count, uint32_t lwe_idx,
+    Torus *__restrict__ lwe_array_out, Torus *__restrict__ lwe_output_indexes,
+    Torus *__restrict__ lut_vector, Torus *__restrict__ lut_vector_indexes,
+    Torus *__restrict__ lwe_array_in, Torus *__restrict__ lwe_input_indexes,
+    double2 *__restrict__ bootstrapping_key, int8_t *device_mem,
+    uint32_t glwe_dimension, uint32_t lwe_dimension, uint32_t polynomial_size,
+    uint32_t base_log, uint32_t level_count, uint32_t lwe_idx,
     size_t device_memory_size_per_sample, uint32_t gpu_offset) {
   // We use shared memory for the polynomials that are used often during the
   // bootstrap, since shared memory is kept in L1 cache and accessing it is

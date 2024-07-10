@@ -751,10 +751,8 @@ template <typename Torus> struct int_radix_lut {
     cuda_drop_async(lwe_indexes_out, streams[0], gpu_indexes[0]);
     cuda_drop_async(lwe_trivial_indexes, streams[0], gpu_indexes[0]);
 
-    cuda_stream_add_callback(streams[0], gpu_indexes[0],
-                             host_free_on_stream_callback, h_lwe_indexes_in);
-    cuda_stream_add_callback(streams[0], gpu_indexes[0],
-                             host_free_on_stream_callback, h_lwe_indexes_out);
+    free(h_lwe_indexes_in);
+    free(h_lwe_indexes_out);
 
     if (!mem_reuse) {
       cuda_drop_async(tmp_lwe_before_ks, streams[0], gpu_indexes[0]);

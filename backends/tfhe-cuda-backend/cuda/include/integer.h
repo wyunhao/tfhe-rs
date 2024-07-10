@@ -704,10 +704,12 @@ template <typename Torus> struct int_radix_lut {
     memcpy(h_lwe_indexes_in, h_indexes_in, num_blocks * sizeof(Torus));
     memcpy(h_lwe_indexes_out, h_indexes_out, num_blocks * sizeof(Torus));
 
+    cuda_synchronize_stream(stream, gpu_index);
     cuda_memcpy_async_to_gpu(lwe_indexes_in, h_lwe_indexes_in,
                              num_blocks * sizeof(Torus), stream, gpu_index);
     cuda_memcpy_async_to_gpu(lwe_indexes_out, h_lwe_indexes_out,
                              num_blocks * sizeof(Torus), stream, gpu_index);
+    cuda_synchronize_stream(stream, gpu_index);
 
     using_trivial_lwe_indexes = false;
   }
@@ -827,8 +829,7 @@ template <typename Torus> struct int_bit_extract_luts_buffer {
           num_radix_blocks * bits_per_block * sizeof(Torus), streams[0],
           gpu_indexes[0]);
       lut->broadcast_lut(streams, gpu_indexes, gpu_indexes[0]);
-      cuda_stream_add_callback(streams[0], gpu_indexes[0],
-                               host_free_on_stream_callback, h_lut_indexes);
+      free(h_lut_indexes);
 
       /**
        * the input indexes should take the first bits_per_block PBS to target
@@ -854,11 +855,8 @@ template <typename Torus> struct int_bit_extract_luts_buffer {
 
       lut->set_lwe_indexes(streams[0], gpu_indexes[0], h_lwe_indexes_in,
                            h_lwe_indexes_out);
-
-      cuda_stream_add_callback(streams[0], gpu_indexes[0],
-                               host_free_on_stream_callback, h_lwe_indexes_in);
-      cuda_stream_add_callback(streams[0], gpu_indexes[0],
-                               host_free_on_stream_callback, h_lwe_indexes_out);
+      free(h_lwe_indexes_in);
+      free(h_lwe_indexes_out);
     }
   }
 
@@ -1064,10 +1062,9 @@ template <typename Torus> struct int_fullprop_buffer {
       Torus *lwe_indexes = lut->get_lut_indexes(gpu_indexes[0], 0);
       cuda_memcpy_async_to_gpu(lwe_indexes, h_lwe_indexes, lwe_indexes_size,
                                streams[0], gpu_indexes[0]);
-      cuda_stream_add_callback(streams[0], gpu_indexes[0],
-                               host_free_on_stream_callback, h_lwe_indexes);
 
       lut->broadcast_lut(streams, gpu_indexes, gpu_indexes[0]);
+      free(h_lwe_indexes);
 
       // Temporary arrays
       Torus small_vector_size =

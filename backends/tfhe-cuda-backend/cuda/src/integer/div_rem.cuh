@@ -288,7 +288,7 @@ host_integer_div_rem_kb(cudaStream_t *streams, uint32_t *gpu_indexes,
           uint32_t shifted_mask = full_message_mask >> shift_amount;
 
           integer_radix_apply_univariate_lookup_table_kb(
-              streams, gpu_indexes, gpu_count, interesting_divisor.last_block(),
+              streams, gpu_indexes, 1, interesting_divisor.last_block(),
               interesting_divisor.last_block(), bsks, ksks, 1,
               mem_ptr->masking_luts_1[shifted_mask]);
         }; // trim_last_interesting_divisor_bits

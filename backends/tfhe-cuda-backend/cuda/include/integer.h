@@ -1846,7 +1846,7 @@ template <typename Torus> struct int_arithmetic_scalar_shift_buffer {
       // With two bits of message this is actually only one LUT.
       for (int s_w_b = 1; s_w_b < num_bits_in_block; s_w_b++) {
         auto shift_last_block_lut_univariate = new int_radix_lut<Torus>(
-            streams, gpu_indexes, gpu_count, params, 1, 1, allocate_gpu_memory);
+            streams, gpu_indexes, 1, params, 1, 1, allocate_gpu_memory);
 
         uint32_t shift_within_block = s_w_b;
 
@@ -1873,14 +1873,12 @@ template <typename Torus> struct int_arithmetic_scalar_shift_buffer {
             shift_last_block_lut_univariate->get_lut(gpu_indexes[0], 0),
             params.glwe_dimension, params.polynomial_size,
             params.message_modulus, params.carry_modulus, last_block_lut_f);
-        shift_last_block_lut_univariate->broadcast_lut(streams, gpu_indexes,
-                                                       gpu_indexes[0]);
 
         lut_buffers_univariate.push_back(shift_last_block_lut_univariate);
       }
 
       auto padding_block_lut_univariate = new int_radix_lut<Torus>(
-          streams, gpu_indexes, gpu_count, params, 1, 1, allocate_gpu_memory);
+          streams, gpu_indexes, 1, params, 1, 1, allocate_gpu_memory);
 
       // lut to compute the padding block
       std::function<Torus(Torus)> padding_block_lut_f;
@@ -1897,8 +1895,6 @@ template <typename Torus> struct int_arithmetic_scalar_shift_buffer {
           padding_block_lut_univariate->get_lut(gpu_indexes[0], 0),
           params.glwe_dimension, params.polynomial_size, params.message_modulus,
           params.carry_modulus, padding_block_lut_f);
-      padding_block_lut_univariate->broadcast_lut(streams, gpu_indexes,
-                                                  gpu_indexes[0]);
 
       lut_buffers_univariate.push_back(padding_block_lut_univariate);
 
@@ -1959,7 +1955,7 @@ template <typename Torus> struct int_arithmetic_scalar_shift_buffer {
       delete buffer;
     }
     for (auto &buffer : lut_buffers_univariate) {
-      buffer->release(streams, gpu_indexes, gpu_count);
+      buffer->release(streams, gpu_indexes, 1);
       delete buffer;
     }
     lut_buffers_bivariate.clear();
@@ -2299,13 +2295,11 @@ template <typename Torus> struct int_tree_sign_reduction_buffer {
           new int_radix_lut<Torus>(streams, gpu_indexes, gpu_count, params, 1,
                                    num_radix_blocks, allocate_gpu_memory);
 
-      tree_last_leaf_lut =
-          new int_radix_lut<Torus>(streams, gpu_indexes, gpu_count, params, 1,
-                                   num_radix_blocks, allocate_gpu_memory);
+      tree_last_leaf_lut = new int_radix_lut<Torus>(
+          streams, gpu_indexes, 1, params, 1, 1, allocate_gpu_memory);
 
-      tree_last_leaf_scalar_lut =
-          new int_radix_lut<Torus>(streams, gpu_indexes, gpu_count, params, 1,
-                                   num_radix_blocks, allocate_gpu_memory);
+      tree_last_leaf_scalar_lut = new int_radix_lut<Torus>(
+          streams, gpu_indexes, 1, params, 1, 1, allocate_gpu_memory);
       generate_device_accumulator_bivariate<Torus>(
           streams[0], gpu_indexes[0],
           tree_inner_leaf_lut->get_lut(gpu_indexes[0], 0),
@@ -2320,9 +2314,9 @@ template <typename Torus> struct int_tree_sign_reduction_buffer {
                uint32_t gpu_count) {
     tree_inner_leaf_lut->release(streams, gpu_indexes, gpu_count);
     delete tree_inner_leaf_lut;
-    tree_last_leaf_lut->release(streams, gpu_indexes, gpu_count);
+    tree_last_leaf_lut->release(streams, gpu_indexes, 1);
     delete tree_last_leaf_lut;
-    tree_last_leaf_scalar_lut->release(streams, gpu_indexes, gpu_count);
+    tree_last_leaf_scalar_lut->release(streams, gpu_indexes, 1);
     delete tree_last_leaf_scalar_lut;
 
     cuda_drop_async(tmp_x, streams[0], gpu_indexes[0]);
@@ -2539,10 +2533,10 @@ template <typename Torus> struct int_comparison_buffer {
         tmp_trivial_sign_block = (Torus *)cuda_malloc_async(
             big_lwe_size * sizeof(Torus), streams[0], gpu_indexes[0]);
 
-        signed_lut = new int_radix_lut<Torus>(
-            streams, gpu_indexes, gpu_count, params, 1, 1, allocate_gpu_memory);
+        signed_lut = new int_radix_lut<Torus>(streams, gpu_indexes, 1, params,
+                                              1, 1, allocate_gpu_memory);
         signed_msb_lut = new int_radix_lut<Torus>(
-            streams, gpu_indexes, gpu_count, params, 1, 1, allocate_gpu_memory);
+            streams, gpu_indexes, 1, params, 1, 1, allocate_gpu_memory);
 
         auto message_modulus = (int)params.message_modulus;
         uint32_t sign_bit_pos = log2(message_modulus) - 1;
@@ -2580,8 +2574,6 @@ template <typename Torus> struct int_comparison_buffer {
             streams[0], gpu_indexes[0], signed_lut->get_lut(gpu_indexes[0], 0),
             params.glwe_dimension, params.polynomial_size,
             params.message_modulus, params.carry_modulus, signed_lut_f);
-
-        signed_lut->broadcast_lut(streams, gpu_indexes, gpu_indexes[0]);
       }
     }
   }
@@ -2617,9 +2609,9 @@ template <typename Torus> struct int_comparison_buffer {
 
     if (is_signed) {
       cuda_drop_async(tmp_trivial_sign_block, streams[0], gpu_indexes[0]);
-      signed_lut->release(streams, gpu_indexes, gpu_count);
+      signed_lut->release(streams, gpu_indexes, 1);
       delete (signed_lut);
-      signed_msb_lut->release(streams, gpu_indexes, gpu_count);
+      signed_msb_lut->release(streams, gpu_indexes, 1);
       delete (signed_msb_lut);
     }
     for (uint j = 0; j < active_gpu_count; j++) {
@@ -2739,20 +2731,23 @@ template <typename Torus> struct int_div_rem_memory {
       std::function<Torus(Torus)> lut_f_masking =
           [shifted_mask](Torus x) -> Torus { return x & shifted_mask; };
 
-      masking_luts_1[i] = new int_radix_lut<Torus>(
-          streams, gpu_indexes, gpu_count, params, 1, num_blocks, true);
+      masking_luts_1[i] =
+          new int_radix_lut<Torus>(streams, gpu_indexes, 1, params, 1, 1, true);
       masking_luts_2[i] = new int_radix_lut<Torus>(
           streams, gpu_indexes, gpu_count, params, 1, num_blocks, true);
 
-      int_radix_lut<Torus> *luts[2] = {masking_luts_1[i], masking_luts_2[i]};
-
-      for (int j = 0; j < 2; j++) {
-        generate_device_accumulator<Torus>(
-            streams[0], gpu_indexes[0], luts[j]->get_lut(gpu_indexes[0], 0),
-            params.glwe_dimension, params.polynomial_size,
-            params.message_modulus, params.carry_modulus, lut_f_masking);
-        luts[j]->broadcast_lut(streams, gpu_indexes, gpu_indexes[0]);
-      }
+      generate_device_accumulator<Torus>(
+          streams[0], gpu_indexes[0],
+          masking_luts_1[i]->get_lut(gpu_indexes[0], 0), params.glwe_dimension,
+          params.polynomial_size, params.message_modulus, params.carry_modulus,
+          lut_f_masking);
+      // No need to broadcast masking luts 1 because it's only defined on 1 GPU
+      generate_device_accumulator<Torus>(
+          streams[0], gpu_indexes[0],
+          masking_luts_2[i]->get_lut(gpu_indexes[0], 0), params.glwe_dimension,
+          params.polynomial_size, params.message_modulus, params.carry_modulus,
+          lut_f_masking);
+      masking_luts_2[i]->broadcast_lut(streams, gpu_indexes, gpu_indexes[0]);
     }
 
     // create and generate message_extract_lut_1 and message_extract_lut_2
@@ -2853,16 +2848,14 @@ template <typename Torus> struct int_div_rem_memory {
         return (x == 0 && y == 0) << i;
       };
 
-      merge_overflow_flags_luts[i] = new int_radix_lut<Torus>(
-          streams, gpu_indexes, gpu_count, params, 1, num_blocks, true);
+      merge_overflow_flags_luts[i] =
+          new int_radix_lut<Torus>(streams, gpu_indexes, 1, params, 1, 1, true);
 
       generate_device_accumulator_bivariate<Torus>(
           streams[0], gpu_indexes[0],
           merge_overflow_flags_luts[i]->get_lut(gpu_indexes[0], 0),
           params.glwe_dimension, params.polynomial_size, params.message_modulus,
           params.carry_modulus, lut_f_bit);
-      merge_overflow_flags_luts[i]->broadcast_lut(streams, gpu_indexes,
-                                                  gpu_indexes[0]);
     }
   }
 
@@ -2924,7 +2917,7 @@ template <typename Torus> struct int_div_rem_memory {
 
     // masking_luts_1 and masking_luts_2
     for (int i = 0; i < params.message_modulus - 1; i++) {
-      masking_luts_1[i]->release(streams, gpu_indexes, gpu_count);
+      masking_luts_1[i]->release(streams, gpu_indexes, 1);
       masking_luts_2[i]->release(streams, gpu_indexes, gpu_count);
 
       delete masking_luts_1[i];
@@ -2962,7 +2955,7 @@ template <typename Torus> struct int_div_rem_memory {
 
     // merge_overflow_flags_luts
     for (int i = 0; i < num_bits_in_message; i++) {
-      merge_overflow_flags_luts[i]->release(streams, gpu_indexes, gpu_count);
+      merge_overflow_flags_luts[i]->release(streams, gpu_indexes, 1);
 
       delete merge_overflow_flags_luts[i];
     }

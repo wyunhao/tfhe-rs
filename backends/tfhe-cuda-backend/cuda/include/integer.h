@@ -495,6 +495,19 @@ template <typename Torus> struct int_radix_lut {
 
     ///////////////
     active_gpu_count = get_active_gpu_count(num_radix_blocks, gpu_count);
+
+    cudaStream_t *local_streams_1 =
+        (cudaStream_t *)malloc(active_gpu_count * sizeof(cudaStream_t));
+    cudaStream_t *local_streams_2 =
+        (cudaStream_t *)malloc(active_gpu_count * sizeof(cudaStream_t));
+    cudaStream_t *local_streams_3 =
+        (cudaStream_t *)malloc(active_gpu_count * sizeof(cudaStream_t));
+    for (uint j = 0; j < active_gpu_count; j++) {
+      local_streams_1[j] = cuda_create_stream(gpu_indexes[j]);
+      local_streams_2[j] = cuda_create_stream(gpu_indexes[j]);
+      local_streams_3[j] = cuda_create_stream(gpu_indexes[j]);
+    }
+
     cuda_synchronize_stream(streams[0], gpu_indexes[0]);
     for (uint i = 0; i < active_gpu_count; i++) {
       cudaSetDevice(i);
@@ -562,23 +575,26 @@ template <typename Torus> struct int_radix_lut {
       /// With multiple GPUs we allocate arrays to be pushed to the vectors and
       /// copy data on each GPU then when we gather data to GPU 0 we can copy
       /// back to the original indexing
+      for (uint i = 0; i < active_gpu_count; i++) {
+        cuda_synchronize_stream(streams[i], gpu_indexes[i]);
+      }
 #pragma omp parallel sections
       {
 #pragma omp section
         {
-          multi_gpu_alloc_lwe(streams, gpu_indexes, gpu_count, lwe_array_in_vec,
-                              num_radix_blocks, params.big_lwe_dimension + 1,
-                              false);
+          multi_gpu_alloc_lwe(local_streams_1, gpu_indexes, gpu_count,
+                              lwe_array_in_vec, num_radix_blocks,
+                              params.big_lwe_dimension + 1, false);
         }
 #pragma omp section
         {
-          multi_gpu_alloc_lwe(streams, gpu_indexes, gpu_count, lwe_after_ks_vec,
-                              num_radix_blocks, params.small_lwe_dimension + 1,
-                              false);
+          multi_gpu_alloc_lwe(local_streams_2, gpu_indexes, gpu_count,
+                              lwe_after_ks_vec, num_radix_blocks,
+                              params.small_lwe_dimension + 1, false);
         }
 #pragma omp section
         {
-          multi_gpu_alloc_lwe(streams, gpu_indexes, gpu_count,
+          multi_gpu_alloc_lwe(local_streams_3, gpu_indexes, gpu_count,
                               lwe_after_pbs_vec, num_radix_blocks,
                               params.big_lwe_dimension + 1, false);
         }
@@ -593,6 +609,19 @@ template <typename Torus> struct int_radix_lut {
                                num_radix_blocks, false);
         }
       }
+      for (uint i = 0; i < active_gpu_count; i++) {
+        cuda_synchronize_stream(local_streams_1[i], gpu_indexes[i]);
+        cuda_synchronize_stream(local_streams_2[i], gpu_indexes[i]);
+        cuda_synchronize_stream(local_streams_3[i], gpu_indexes[i]);
+      }
+      for (uint j = 0; j < active_gpu_count; j++) {
+        cuda_destroy_stream(local_streams_1[j], gpu_indexes[j]);
+        cuda_destroy_stream(local_streams_2[j], gpu_indexes[j]);
+        cuda_destroy_stream(local_streams_3[j], gpu_indexes[j]);
+      }
+      free(local_streams_1);
+      free(local_streams_2);
+      free(local_streams_3);
 
       // Keyswitch
       Torus big_size =

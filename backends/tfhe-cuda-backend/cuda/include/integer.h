@@ -2052,9 +2052,6 @@ template <typename Torus> struct int_cmux_buffer {
                                               Torus condition) -> Torus {
         return predicate_lut_f(condition) ? block : 0;
       };
-      auto message_extract_lut_f = [params](Torus x) -> Torus {
-        return x % params.message_modulus;
-      };
 
       predicate_lut =
           new int_radix_lut<Torus>(streams, gpu_indexes, gpu_count, params, 1,
@@ -2066,7 +2063,7 @@ template <typename Torus> struct int_cmux_buffer {
 
       message_extract_lut =
           new int_radix_lut<Torus>(streams, gpu_indexes, gpu_count, params, 1,
-                                   num_radix_blocks, allocate_gpu_memory);
+                                   num_radix_blocks, predicate_lut);
 
       generate_device_accumulator_bivariate<Torus>(
           streams[0], gpu_indexes[0], predicate_lut->get_lut(gpu_indexes[0], 0),
@@ -2079,16 +2076,9 @@ template <typename Torus> struct int_cmux_buffer {
           params.glwe_dimension, params.polynomial_size, params.message_modulus,
           params.carry_modulus, inverted_lut_f);
 
-      generate_device_accumulator<Torus>(
-          streams[0], gpu_indexes[0],
-          message_extract_lut->get_lut(gpu_indexes[0], 0),
-          params.glwe_dimension, params.polynomial_size, params.message_modulus,
-          params.carry_modulus, message_extract_lut_f);
-
       predicate_lut->broadcast_lut(streams, gpu_indexes, gpu_indexes[0]);
       inverted_predicate_lut->broadcast_lut(streams, gpu_indexes,
                                             gpu_indexes[0]);
-      message_extract_lut->broadcast_lut(streams, gpu_indexes, gpu_indexes[0]);
     }
   }
 

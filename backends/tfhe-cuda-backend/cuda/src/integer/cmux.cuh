@@ -89,6 +89,17 @@ __host__ void host_integer_radix_cmux_kb(
                 mem_ptr->tmp_false_ct, params.big_lwe_dimension,
                 num_radix_blocks);
 
+  auto message_extract_lut_f = [params](Torus x) -> Torus {
+    return x % params.message_modulus;
+  };
+  generate_device_accumulator<Torus>(
+      streams[0], gpu_indexes[0],
+      mem_ptr->message_extract_lut->get_lut(gpu_indexes[0], 0),
+      params.glwe_dimension, params.polynomial_size, params.message_modulus,
+      params.carry_modulus, message_extract_lut_f);
+  mem_ptr->message_extract_lut->broadcast_lut(streams, gpu_indexes,
+                                              gpu_indexes[0]);
+
   integer_radix_apply_univariate_lookup_table_kb<Torus>(
       streams, gpu_indexes, gpu_count, lwe_array_out, added_cts, bsks, ksks,
       num_radix_blocks, mem_ptr->message_extract_lut);

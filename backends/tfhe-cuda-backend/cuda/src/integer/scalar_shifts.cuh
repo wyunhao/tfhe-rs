@@ -226,7 +226,7 @@ __host__ void host_integer_radix_arithmetic_scalar_shift_kb_inplace(
 #pragma omp section
       {
         integer_radix_apply_univariate_lookup_table_kb(
-            mem->local_streams_1, gpu_indexes, 1, padding_block,
+            mem->local_streams_1, gpu_indexes, gpu_count, padding_block,
             last_block_copy, bsks, ksks, 1, lut_univariate_padding_block);
         // Replace blocks 'pulled' from the left with the correct padding block
         for (uint i = 0; i < rotations; i++) {
@@ -240,8 +240,8 @@ __host__ void host_integer_radix_arithmetic_scalar_shift_kb_inplace(
       {
         if (shift_within_block != 0 && rotations != num_blocks) {
           integer_radix_apply_univariate_lookup_table_kb(
-              mem->local_streams_2, gpu_indexes, 1, last_block, last_block_copy,
-              bsks, ksks, 1, lut_univariate_shift_last_block);
+              mem->local_streams_2, gpu_indexes, gpu_count, last_block,
+              last_block_copy, bsks, ksks, 1, lut_univariate_shift_last_block);
         }
       }
     }

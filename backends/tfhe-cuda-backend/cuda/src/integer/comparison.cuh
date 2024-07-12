@@ -452,10 +452,12 @@ tree_sign_reduction(cudaStream_t *streams, uint32_t *gpu_indexes,
   generate_device_accumulator<Torus>(
       streams[0], gpu_indexes[0], last_lut->get_lut(gpu_indexes[0], 0),
       glwe_dimension, polynomial_size, message_modulus, carry_modulus, f);
+  last_lut->broadcast_lut(streams, gpu_indexes, gpu_indexes[0]);
 
   // Last leaf
-  integer_radix_apply_univariate_lookup_table_kb(
-      streams, gpu_indexes, 1, lwe_array_out, y, bsks, ksks, 1, last_lut);
+  integer_radix_apply_univariate_lookup_table_kb(streams, gpu_indexes,
+                                                 gpu_count, lwe_array_out, y,
+                                                 bsks, ksks, 1, last_lut);
 }
 
 template <typename Torus>
@@ -549,7 +551,7 @@ __host__ void host_integer_radix_difference_check_kb(
           mem_ptr, bsks, ksks, 1);
       // Compare the sign block separately
       integer_radix_apply_bivariate_lookup_table_kb(
-          streams, gpu_indexes, 1,
+          streams, gpu_indexes, gpu_count,
           comparisons + (packed_num_radix_blocks + 1) * big_lwe_size,
           lwe_array_left + (num_radix_blocks - 1) * big_lwe_size,
           lwe_array_right + (num_radix_blocks - 1) * big_lwe_size, bsks, ksks,
@@ -562,7 +564,7 @@ __host__ void host_integer_radix_difference_check_kb(
                               ksks, num_radix_blocks - 1);
       // Compare the sign block separately
       integer_radix_apply_bivariate_lookup_table_kb(
-          streams, gpu_indexes, 1,
+          streams, gpu_indexes, gpu_count,
           comparisons + (num_radix_blocks - 1) * big_lwe_size,
           lwe_array_left + (num_radix_blocks - 1) * big_lwe_size,
           lwe_array_right + (num_radix_blocks - 1) * big_lwe_size, bsks, ksks,

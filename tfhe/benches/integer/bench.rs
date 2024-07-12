@@ -2037,32 +2037,32 @@ mod cuda {
 
     criterion_group!(
         default_cuda_ops,
-        cuda_neg,
-        cuda_sub,
-        cuda_unsigned_overflowing_sub,
-        cuda_unsigned_overflowing_add,
+        //cuda_neg,
+        //cuda_sub,
+        //cuda_unsigned_overflowing_sub,
+        //cuda_unsigned_overflowing_add,
         cuda_add,
         cuda_mul,
         cuda_div_rem,
         //cuda_div,
         //cuda_rem,
         cuda_eq,
-        cuda_ne,
+        //cuda_ne,
         cuda_ge,
-        cuda_gt,
-        cuda_le,
-        cuda_lt,
+        //cuda_gt,
+        //cuda_le,
+        //cuda_lt,
         cuda_max,
-        cuda_min,
+        //cuda_min,
         cuda_bitand,
-        cuda_bitor,
-        cuda_bitxor,
+        //cuda_bitor,
+        //cuda_bitxor,
         cuda_bitnot,
         cuda_default_if_then_else,
         cuda_left_shift,
-        cuda_right_shift,
+        //cuda_right_shift,
         cuda_rotate_left,
-        cuda_rotate_right,
+        //cuda_rotate_right,
     );
 
     criterion_group!(
@@ -2520,8 +2520,8 @@ fn go_through_gpu_bench_groups(val: &str) {
     match val.to_lowercase().as_str() {
         "default" => {
             default_cuda_ops();
-            default_scalar_cuda_ops();
-            cuda_cast_ops();
+            //default_scalar_cuda_ops();
+            //cuda_cast_ops();
         }
         "unchecked" => {
             unchecked_cuda_ops();

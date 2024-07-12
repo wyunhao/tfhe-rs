@@ -582,29 +582,29 @@ template <typename Torus> struct int_radix_lut {
       {
 #pragma omp section
         {
-          multi_gpu_alloc_lwe(local_streams_1, gpu_indexes, gpu_count,
+          multi_gpu_alloc_lwe(local_streams_1, gpu_indexes, active_gpu_count,
                               lwe_array_in_vec, num_radix_blocks,
                               params.big_lwe_dimension + 1, false);
         }
 #pragma omp section
         {
-          multi_gpu_alloc_lwe(local_streams_2, gpu_indexes, gpu_count,
+          multi_gpu_alloc_lwe(local_streams_2, gpu_indexes, active_gpu_count,
                               lwe_after_ks_vec, num_radix_blocks,
                               params.small_lwe_dimension + 1, false);
         }
 #pragma omp section
         {
-          multi_gpu_alloc_lwe(local_streams_3, gpu_indexes, gpu_count,
+          multi_gpu_alloc_lwe(local_streams_3, gpu_indexes, active_gpu_count,
                               lwe_after_pbs_vec, num_radix_blocks,
                               params.big_lwe_dimension + 1, false);
         }
 #pragma omp section
         {
-          multi_gpu_alloc_array(streams, gpu_indexes, gpu_count,
+          multi_gpu_alloc_array(streams, gpu_indexes, active_gpu_count,
                                 lwe_trivial_indexes_vec, num_radix_blocks,
                                 false);
           cuda_synchronize_stream(streams[0], gpu_indexes[0]);
-          multi_gpu_copy_array(streams, gpu_indexes, gpu_count,
+          multi_gpu_copy_array(streams, gpu_indexes, active_gpu_count,
                                lwe_trivial_indexes_vec, lwe_trivial_indexes,
                                num_radix_blocks, false);
         }

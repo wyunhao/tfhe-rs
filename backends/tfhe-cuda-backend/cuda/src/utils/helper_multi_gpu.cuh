@@ -11,7 +11,6 @@ void multi_gpu_alloc_array(cudaStream_t *streams, uint32_t *gpu_indexes,
                            bool sync_threads = true) {
 
   dest.resize(gpu_count);
-#pragma omp parallel for num_threads(gpu_count)
   for (uint i = 0; i < gpu_count; i++) {
     Torus *d_array = (Torus *)cuda_malloc_async(
         elements_per_gpu * sizeof(Torus), streams[i], gpu_indexes[i]);
@@ -33,7 +32,6 @@ void multi_gpu_copy_array(cudaStream_t *streams, uint32_t *gpu_indexes,
     cuda_synchronize_stream(streams[0], gpu_indexes[0]);
 
   dest.resize(active_gpu_count);
-#pragma omp parallel for num_threads(active_gpu_count)
   for (uint i = 0; i < active_gpu_count; i++) {
     cuda_memcpy_async_gpu_to_gpu(dest[i], src, elements_per_gpu * sizeof(Torus),
                                  streams[i], gpu_indexes[i]);
@@ -54,7 +52,6 @@ void multi_gpu_alloc_lwe(cudaStream_t *streams, uint32_t *gpu_indexes,
   auto active_gpu_count = get_active_gpu_count(num_inputs, gpu_count);
 
   dest.resize(active_gpu_count);
-#pragma omp parallel for num_threads(active_gpu_count)
   for (uint i = 0; i < active_gpu_count; i++) {
     auto inputs_on_gpu = get_num_inputs_on_gpu(num_inputs, i, active_gpu_count);
     Torus *d_array = (Torus *)cuda_malloc_async(
@@ -85,7 +82,6 @@ void multi_gpu_scatter_lwe(cudaStream_t *streams, uint32_t *gpu_indexes,
     cuda_synchronize_stream(streams[0], gpu_indexes[0]);
 
   dest.resize(active_gpu_count);
-#pragma omp parallel for num_threads(active_gpu_count)
   for (uint i = 0; i < active_gpu_count; i++) {
     auto inputs_on_gpu = get_num_inputs_on_gpu(num_inputs, i, active_gpu_count);
     auto gpu_offset = 0;
@@ -103,8 +99,6 @@ void multi_gpu_scatter_lwe(cudaStream_t *streams, uint32_t *gpu_indexes,
     } else {
       auto src_indexes = h_src_indexes + gpu_offset;
 
-      // TODO Check if we can increase parallelization by adding another omp
-      // clause here
       for (uint j = 0; j < inputs_on_gpu; j++) {
         auto d_dest = dest[i] + j * elements_per_input;
         auto d_src = src + src_indexes[j] * elements_per_input;
@@ -137,7 +131,6 @@ void multi_gpu_gather_lwe(cudaStream_t *streams, uint32_t *gpu_indexes,
   if (sync_threads)
     cuda_synchronize_stream(streams[0], gpu_indexes[0]);
 
-#pragma omp parallel for num_threads(active_gpu_count)
   for (uint i = 0; i < active_gpu_count; i++) {
     auto inputs_on_gpu = get_num_inputs_on_gpu(num_inputs, i, active_gpu_count);
     auto gpu_offset = 0;
@@ -155,8 +148,6 @@ void multi_gpu_gather_lwe(cudaStream_t *streams, uint32_t *gpu_indexes,
     } else {
       auto dest_indexes = h_dest_indexes + gpu_offset;
 
-      // TODO Check if we can increase parallelization by adding another omp
-      // clause here
       for (uint j = 0; j < inputs_on_gpu; j++) {
         auto d_dest = dest + dest_indexes[j] * elements_per_input;
         auto d_src = src[i] + j * elements_per_input;
@@ -177,7 +168,6 @@ void multi_gpu_release_lwe(cudaStream_t *streams, uint32_t *gpu_indexes,
                            std::vector<Torus *> &vec,
                            bool sync_threads = true) {
 
-#pragma omp parallel for num_threads(vec.size())
   for (uint i = 0; i < vec.size(); i++) {
     cuda_drop_async(vec[i], streams[i], gpu_indexes[i]);
     if (sync_threads)

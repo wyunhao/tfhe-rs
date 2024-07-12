@@ -74,9 +74,10 @@ void multi_gpu_scatter_lwe(cudaStream_t *streams, uint32_t *gpu_indexes,
                            Torus *src, Torus *h_src_indexes,
                            bool is_trivial_index, uint32_t num_inputs,
                            uint32_t elements_per_input,
-                           bool sync_threads = true) {
+                           bool sync_threads = true, uint32_t num_inputs_pbs_mul = 0) {
 
   auto active_gpu_count = get_active_gpu_count(num_inputs, gpu_count);
+  if (num_inputs_pbs_mul == 0) num_inputs_pbs_mul = num_inputs;
 
   if (sync_threads)
     cuda_synchronize_stream(streams[0], gpu_indexes[0]);
@@ -86,7 +87,7 @@ void multi_gpu_scatter_lwe(cudaStream_t *streams, uint32_t *gpu_indexes,
     auto inputs_on_gpu = get_num_inputs_on_gpu(num_inputs, i, active_gpu_count);
     auto gpu_offset = 0;
     for (uint j = 0; j < i; j++) {
-      gpu_offset += get_num_inputs_on_gpu(num_inputs, j, active_gpu_count);
+      gpu_offset += get_num_inputs_on_gpu(num_inputs_pbs_mul, j, active_gpu_count);
     }
 
     if (is_trivial_index) {

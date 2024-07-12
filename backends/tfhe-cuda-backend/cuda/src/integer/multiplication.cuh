@@ -370,7 +370,7 @@ __host__ void host_integer_sum_ciphertexts_vec_kb(
           streams, gpu_indexes, active_gpu_count, new_blocks_vec, new_blocks,
           luts_message_carry->h_lwe_indexes_in,
           luts_message_carry->using_trivial_lwe_indexes, message_count,
-          big_lwe_size, false);
+          big_lwe_size, false, total_count);
 
       /// Apply KS to go from a big LWE dimension to a small LWE dimension
       /// After this keyswitch execution, we need to synchronize the streams
@@ -381,20 +381,6 @@ __host__ void host_integer_sum_ciphertexts_vec_kb(
           lwe_trivial_indexes_vec, new_blocks_vec, lwe_trivial_indexes_vec,
           ksks, big_lwe_dimension, lwe_dimension, mem_ptr->params.ks_base_log,
           mem_ptr->params.ks_level, message_count, false);
-
-      /// Copy data back to GPU 0, rebuild the lwe array, and scatter again on a
-      /// different configuration
-      multi_gpu_gather_lwe<Torus>(streams, gpu_indexes, active_gpu_count,
-                                  small_lwe_vector, small_lwe_vector_vec,
-                                  luts_message_carry->h_lwe_indexes_in,
-                                  luts_message_carry->using_trivial_lwe_indexes,
-                                  message_count, small_lwe_size);
-
-      multi_gpu_scatter_lwe<Torus>(
-          streams, gpu_indexes, active_gpu_count, small_lwe_vector_vec,
-          small_lwe_vector, luts_message_carry->h_lwe_indexes_in,
-          luts_message_carry->using_trivial_lwe_indexes, total_count,
-          small_lwe_size, false);
 
       /// Apply PBS to apply a LUT, reduce the noise and go from a small LWE
       /// dimension to a big LWE dimension

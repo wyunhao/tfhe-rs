@@ -134,11 +134,10 @@ void execute_keyswitch(cudaStream_t *streams, uint32_t *gpu_indexes,
 
   /// If the number of radix blocks is lower than the number of GPUs, not all
   /// GPUs will be active and there will be 1 input per GPU
-  auto active_gpu_count = get_active_gpu_count(num_samples, gpu_count);
   if (sync_streams)
     cuda_synchronize_stream(streams[0], gpu_indexes[0]);
-#pragma omp parallel for num_threads(active_gpu_count)
-  for (uint i = 0; i < active_gpu_count; i++) {
+#pragma omp parallel for num_threads(gpu_count)
+  for (uint i = 0; i < gpu_count; i++) {
     int num_samples_on_gpu = get_num_inputs_on_gpu(num_samples, i, gpu_count);
 
     Torus *current_lwe_array_out = GET_VARIANT_ELEMENT(lwe_array_out, i);
@@ -157,7 +156,7 @@ void execute_keyswitch(cudaStream_t *streams, uint32_t *gpu_indexes,
   }
 
   if (sync_streams)
-    for (uint i = 0; i < active_gpu_count; i++) {
+    for (uint i = 0; i < gpu_count; i++) {
       cuda_synchronize_stream(streams[i], gpu_indexes[i]);
     }
 }

@@ -508,7 +508,9 @@ template <typename Torus> struct int_radix_lut {
       local_streams_3[j] = cuda_create_stream(gpu_indexes[j]);
     }
 
+    buffer.resize(active_gpu_count);
     cuda_synchronize_stream(streams[0], gpu_indexes[0]);
+#pragma omp parallel for num_threads(active_gpu_count)
     for (uint i = 0; i < active_gpu_count; i++) {
       cudaSetDevice(i);
       int8_t *gpu_pbs_buffer;
@@ -522,13 +524,16 @@ template <typename Torus> struct int_radix_lut {
           cuda_get_max_shared_memory(gpu_indexes[i]), params.pbs_type,
           allocate_gpu_memory);
       cuda_synchronize_stream(streams[i], gpu_indexes[i]);
-      buffer.push_back(gpu_pbs_buffer);
+      buffer[i] = gpu_pbs_buffer;
     }
 
     if (allocate_gpu_memory) {
       // Allocate LUT
       // LUT is used as a trivial encryption and must be initialized outside
       // this constructor
+      lut_vec.resize(active_gpu_count);
+      lut_indexes_vec.resize(active_gpu_count);
+#pragma omp parallel for num_threads(active_gpu_count)
       for (uint i = 0; i < active_gpu_count; i++) {
         auto lut = (Torus *)cuda_malloc_async(num_luts * lut_buffer_size,
                                               streams[i], gpu_indexes[i]);
@@ -539,8 +544,8 @@ template <typename Torus> struct int_radix_lut {
         cuda_memset_async(lut_indexes, 0, lut_indexes_size, streams[i],
                           gpu_indexes[i]);
 
-        lut_vec.push_back(lut);
-        lut_indexes_vec.push_back(lut_indexes);
+        lut_vec[i] = lut;
+        lut_indexes_vec[i] = lut_indexes;
 
         cuda_synchronize_stream(streams[i], gpu_indexes[i]);
       }
@@ -666,6 +671,9 @@ template <typename Torus> struct int_radix_lut {
     // LUT is used as a trivial encryption and must be initialized outside
     // this constructor
     active_gpu_count = get_active_gpu_count(num_radix_blocks, gpu_count);
+    lut_vec.resize(active_gpu_count);
+    lut_indexes_vec.resize(active_gpu_count);
+#pragma omp parallel for num_threads(active_gpu_count)
     for (uint i = 0; i < active_gpu_count; i++) {
       auto lut = (Torus *)cuda_malloc_async(num_luts * lut_buffer_size,
                                             streams[i], gpu_indexes[i]);
@@ -676,8 +684,8 @@ template <typename Torus> struct int_radix_lut {
       cuda_memset_async(lut_indexes, 0, lut_indexes_size, streams[i],
                         gpu_indexes[i]);
 
-      lut_vec.push_back(lut);
-      lut_indexes_vec.push_back(lut_indexes);
+      lut_vec[i] = lut;
+      lut_indexes_vec[i] = lut_indexes;
 
       cuda_synchronize_stream(streams[i], gpu_indexes[i]);
     }

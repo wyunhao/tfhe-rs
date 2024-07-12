@@ -129,8 +129,6 @@ void execute_pbs(
     uint32_t level_count, uint32_t grouping_factor,
     uint32_t input_lwe_ciphertext_count, uint32_t num_luts, uint32_t lwe_idx,
     uint32_t max_shared_memory, PBS_TYPE pbs_type, bool sync_streams = true) {
-  auto active_gpu_count =
-      get_active_gpu_count(input_lwe_ciphertext_count, gpu_count);
   if (sync_streams)
     cuda_synchronize_stream(streams[0], gpu_indexes[0]);
   switch (sizeof(Torus)) {
@@ -140,8 +138,8 @@ void execute_pbs(
     case MULTI_BIT:
       PANIC("Error: 32-bit multibit PBS is not supported.\n")
     case CLASSICAL:
-#pragma omp parallel for num_threads(active_gpu_count)
-      for (uint i = 0; i < active_gpu_count; i++) {
+#pragma omp parallel for num_threads(gpu_count)
+      for (uint i = 0; i < gpu_count; i++) {
         int num_inputs_on_gpu =
             get_num_inputs_on_gpu(input_lwe_ciphertext_count, i, gpu_count);
 
@@ -180,8 +178,8 @@ void execute_pbs(
     case MULTI_BIT:
       if (grouping_factor == 0)
         PANIC("Multi-bit PBS error: grouping factor should be > 0.")
-#pragma omp parallel for num_threads(active_gpu_count)
-      for (uint i = 0; i < active_gpu_count; i++) {
+#pragma omp parallel for num_threads(gpu_count)
+      for (uint i = 0; i < gpu_count; i++) {
         int num_inputs_on_gpu =
             get_num_inputs_on_gpu(input_lwe_ciphertext_count, i, gpu_count);
 
@@ -210,8 +208,8 @@ void execute_pbs(
       }
       break;
     case CLASSICAL:
-#pragma omp parallel for num_threads(active_gpu_count)
-      for (uint i = 0; i < active_gpu_count; i++) {
+#pragma omp parallel for num_threads(gpu_count)
+      for (uint i = 0; i < gpu_count; i++) {
         int num_inputs_on_gpu =
             get_num_inputs_on_gpu(input_lwe_ciphertext_count, i, gpu_count);
 
@@ -249,7 +247,7 @@ void execute_pbs(
   }
 
   if (sync_streams)
-    for (uint i = 0; i < active_gpu_count; i++) {
+    for (uint i = 0; i < gpu_count; i++) {
       cuda_synchronize_stream(streams[i], gpu_indexes[i]);
     }
 }

@@ -138,7 +138,6 @@ void execute_pbs(
     case MULTI_BIT:
       PANIC("Error: 32-bit multibit PBS is not supported.\n")
     case CLASSICAL:
-#pragma omp parallel for num_threads(gpu_count)
       for (uint i = 0; i < gpu_count; i++) {
         int num_inputs_on_gpu =
             get_num_inputs_on_gpu(input_lwe_ciphertext_count, i, gpu_count);
@@ -178,7 +177,6 @@ void execute_pbs(
     case MULTI_BIT:
       if (grouping_factor == 0)
         PANIC("Multi-bit PBS error: grouping factor should be > 0.")
-#pragma omp parallel for num_threads(gpu_count)
       for (uint i = 0; i < gpu_count; i++) {
         int num_inputs_on_gpu =
             get_num_inputs_on_gpu(input_lwe_ciphertext_count, i, gpu_count);
@@ -208,7 +206,6 @@ void execute_pbs(
       }
       break;
     case CLASSICAL:
-#pragma omp parallel for num_threads(gpu_count)
       for (uint i = 0; i < gpu_count; i++) {
         int num_inputs_on_gpu =
             get_num_inputs_on_gpu(input_lwe_ciphertext_count, i, gpu_count);

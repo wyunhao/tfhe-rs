@@ -136,7 +136,6 @@ void execute_keyswitch(cudaStream_t *streams, uint32_t *gpu_indexes,
   /// GPUs will be active and there will be 1 input per GPU
   if (sync_streams)
     cuda_synchronize_stream(streams[0], gpu_indexes[0]);
-#pragma omp parallel for num_threads(gpu_count)
   for (uint i = 0; i < gpu_count; i++) {
     int num_samples_on_gpu = get_num_inputs_on_gpu(num_samples, i, gpu_count);
 

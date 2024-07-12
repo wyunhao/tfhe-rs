@@ -41,7 +41,7 @@ pub fn fill_lwe_mask_and_body_for_encryption<Scalar, KeyCont, OutputCont, Gen>(
     generator.fill_slice_with_random_mask_custom_mod(output_mask.as_mut(), ciphertext_modulus);
 
     // generate an error from the normal distribution described by std_dev
-    *output_body.data = generator.random_noise_custom_mod(noise_parameters, ciphertext_modulus);
+    *output_body.data = generator.random_uniform_noise_custom_mod(ciphertext_modulus);
     *output_body.data = (*output_body.data).wrapping_add(encoded.0);
 
     if !ciphertext_modulus.is_native_modulus() {

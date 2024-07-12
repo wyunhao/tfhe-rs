@@ -444,8 +444,8 @@ pub const WOPBS_PARAM_MESSAGE_2_CARRY_2_KS_PBS: WopbsParameters = WopbsParameter
     pfks_modular_std_dev: StandardDev(0.00000000000000029403601535432533),
     cbs_level: DecompositionLevelCount(3),
     cbs_base_log: DecompositionBaseLog(5),
-    message_modulus: MessageModulus(4),
-    carry_modulus: CarryModulus(4),
+    message_modulus: MessageModulus(50),
+    carry_modulus: CarryModulus(50),
     ciphertext_modulus: CiphertextModulus::new_native(),
     encryption_key_choice: EncryptionKeyChoice::Big,
 };

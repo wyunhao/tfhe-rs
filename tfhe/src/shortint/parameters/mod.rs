@@ -704,7 +704,7 @@ pub const PARAM_MESSAGE_2_CARRY_2_KS_PBS: ClassicPBSParameters = ClassicPBSParam
     pbs_level: DecompositionLevelCount(1),
     ks_level: DecompositionLevelCount(5),
     ks_base_log: DecompositionBaseLog(3),
-    message_modulus: MessageModulus(4),
+    message_modulus: MessageModulus(50),
     carry_modulus: CarryModulus(4),
     ciphertext_modulus: CiphertextModulus::new_native(),
     encryption_key_choice: EncryptionKeyChoice::Big,

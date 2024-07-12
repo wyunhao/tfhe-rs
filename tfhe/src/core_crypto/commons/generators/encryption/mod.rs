@@ -286,6 +286,16 @@ impl<G: ByteRandomGenerator> EncryptionRandomGenerator<G> {
         self.noise.random_noise_custom_mod(std, custom_modulus)
     }
 
+    pub(crate) fn random_uniform_noise_custom_mod<Scalar>(
+        &mut self,
+        custom_modulus: CiphertextModulus<Scalar>,
+    ) -> Scalar
+    where
+        Scalar: UnsignedInteger + RandomGenerable<Uniform>,
+    {
+        self.noise.random_uniform_noise_custom_mod(custom_modulus)
+    }
+
     // Fills the input slice with random noise, using the noise generator.
     pub(crate) fn fill_slice_with_random_noise<Scalar>(
         &mut self,
@@ -310,6 +320,20 @@ impl<G: ByteRandomGenerator> EncryptionRandomGenerator<G> {
         self.noise
             .fill_slice_with_random_noise_custom_mod(output, std, custom_modulus)
     }
+
+
+    pub(crate) fn fill_slice_with_random_uniform_noise_custom_mod<Scalar>(
+        &mut self,
+        output: &mut [Scalar],
+        custom_modulus: CiphertextModulus<Scalar>,
+    ) where
+        Scalar: UnsignedInteger + RandomGenerable<Uniform>
+    {
+        self.noise
+            .fill_slice_with_random_uniform_noise_custom_mod(output, custom_modulus)
+    }
+
+
 
     // Adds noise on top of existing data for in place encryption
     pub(crate) fn unsigned_torus_slice_wrapping_add_random_noise_assign<Scalar>(

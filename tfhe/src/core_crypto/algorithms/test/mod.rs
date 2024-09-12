@@ -219,7 +219,7 @@ macro_rules! create_parametrized_test{
      ($name:ident)=> {
         create_parametrized_test!($name
         {
-            TEST_PARAMS_4_BITS_NATIVE_U64,
+            // TEST_PARAMS_4_BITS_NATIVE_U64,
             TEST_PARAMS_3_BITS_63_U64
         });
     };

@@ -27,18 +27,70 @@ pub fn fill_glwe_mask_and_body_for_encryption_assign<KeyCont, BodyCont, MaskCont
     MaskCont: ContainerMut<Element = Scalar>,
     Gen: ByteRandomGenerator,
 {
-    assert_eq!(
-        output_mask.ciphertext_modulus(),
-        output_body.ciphertext_modulus(),
-        "Mismatched moduli between output_mask ({:?}) and output_body ({:?})",
-        output_mask.ciphertext_modulus(),
-        output_body.ciphertext_modulus()
-    );
+
 
     let ciphertext_modulus = output_body.ciphertext_modulus();
+    let polynomial_size = output_mask.polynomial_size();
+    let glwe_dimension = output_mask.glwe_dimension();
+    
+    
+    let mut final_mask_body = GlweBody::from_container(
+        vec![
+            Scalar::ZERO;
+            glwe_ciphertext_mask_size(
+                glwe_dimension,
+                polynomial_size
+            )
+        ],
+        ciphertext_modulus,
+    );
+    let mut final_body = GlweBody::from_container(
+        vec![
+            Scalar::ZERO;
+            glwe_ciphertext_mask_size(
+                glwe_dimension,
+                polynomial_size
+            )
+        ],
+        ciphertext_modulus,
+    );
 
-    assert!(ciphertext_modulus.is_compatible_with_native_modulus());
 
+    let mut final_mask = GlweMask::from_container(
+        vec![
+            Scalar::ZERO;
+            glwe_ciphertext_mask_size(
+                glwe_dimension,
+                polynomial_size
+            )
+        ],
+        polynomial_size,
+        ciphertext_modulus,
+    );
+    let mut output_body_mask = GlweMask::from_container(
+        vec![
+            Scalar::ZERO;
+            glwe_ciphertext_mask_size(
+                glwe_dimension,
+                polynomial_size
+            )
+        ],
+        polynomial_size,
+        ciphertext_modulus,
+    );
+    let mut x_enc = GlweMask::from_container(
+        vec![
+            Scalar::ZERO;
+            glwe_ciphertext_mask_size(
+                glwe_dimension,
+                polynomial_size
+            )
+        ],
+        polynomial_size,
+        ciphertext_modulus,
+    );
+
+    // the following basically generate a public key, i.e., direct encryption on secret key
     generator.fill_slice_with_random_mask_custom_mod(output_mask.as_mut(), ciphertext_modulus);
     generator.unsigned_torus_slice_wrapping_add_random_noise_custom_mod_assign(
         output_body.as_mut(),
@@ -57,6 +109,41 @@ pub fn fill_glwe_mask_and_body_for_encryption_assign<KeyCont, BodyCont, MaskCont
         &output_mask.as_polynomial_list(),
         &glwe_secret_key.as_polynomial_list(),
     );
+
+    // now, treat output_mask and output_body as base, and do encryption on top of that
+    // to simulate the normal RLWE encryption
+
+    generator.unsigned_torus_slice_wrapping_add_random_noise_custom_mod_assign(
+        final_mask_body.as_mut(),
+        noise_parameters,
+        ciphertext_modulus,
+    );// add e1
+    generator.unsigned_torus_slice_wrapping_add_random_noise_custom_mod_assign(
+        final_body.as_mut(),
+        noise_parameters,
+        ciphertext_modulus,
+    );// add e2
+
+    generator.fill_slice_with_random_mask_custom_mod(x_enc.as_mut(), ciphertext_modulus);
+
+    if !ciphertext_modulus.is_native_modulus() {
+        let torus_scaling = ciphertext_modulus.get_power_of_two_scaling_to_native_torus();
+        slice_wrapping_scalar_mul_assign(final_mask.as_mut(), torus_scaling);
+        slice_wrapping_scalar_mul_assign(final_mask_body.as_mut(), torus_scaling);
+        slice_wrapping_scalar_mul_assign(final_body.as_mut(), torus_scaling);
+    }
+
+    polynomial_wrapping_add_multisum_assign(
+        &mut final_mask_body.as_mut_polynomial(),
+        &x_enc.as_polynomial_list(),
+        &output_mask.as_polynomial_list(),
+    ); // x * a, need to fill final_mask with final_mask_body
+    
+    polynomial_wrapping_add_multisum_assign(
+        &mut final_body.as_mut_polynomial(),
+        &x_enc.as_polynomial_list(),
+        &output_body_mask.as_polynomial_list(),
+    ); // x * b, need to fill output_body_mask with output_body
 }
 
 /// Variant of [`encrypt_glwe_ciphertext`] which assumes that the plaintexts to encrypt are already

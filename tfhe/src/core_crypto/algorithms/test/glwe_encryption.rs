@@ -1,4 +1,6 @@
 use super::*;
+use chrono::prelude::*;
+use chrono::Timelike;
 
 fn glwe_encrypt_assign_decrypt_custom_mod<Scalar: UnsignedTorus>(params: TestParams<Scalar>) {
     let glwe_dimension = params.glwe_dimension;
@@ -13,7 +15,8 @@ fn glwe_encrypt_assign_decrypt_custom_mod<Scalar: UnsignedTorus>(params: TestPar
     const NB_TESTS: usize = 10;
     let msg_modulus = Scalar::ONE.shl(message_modulus_log.0);
     let mut msg = msg_modulus;
-    let delta: Scalar = encoding_with_padding / msg_modulus;
+    // let delta: Scalar = encoding_with_padding / msg_modulus;
+    let delta = Scalar::ONE << (Scalar::BITS - 5);
 
     while msg != Scalar::ZERO {
         msg = msg.wrapping_sub(Scalar::ONE);
@@ -33,11 +36,28 @@ fn glwe_encrypt_assign_decrypt_custom_mod<Scalar: UnsignedTorus>(params: TestPar
                 ciphertext_modulus,
             );
 
-            encrypt_glwe_ciphertext_assign(
+            let input_plaintext_list =
+                PlaintextList::new(msg * delta, PlaintextCount(glwe.polynomial_size().0));
+
+            let mut now = Utc::now();
+            println!(
+                "Current time: {}.{}",
+                now.format("%Y-%m-%d %H:%M:%S"),
+                now.timestamp_subsec_millis()
+            );
+            encrypt_glwe_ciphertext(
                 &glwe_sk,
                 &mut glwe,
+                &input_plaintext_list,
                 glwe_modular_std_dev,
                 &mut rsc.encryption_random_generator,
+            );
+
+            now = Utc::now();
+            println!(
+                "Current time: {}.{}",
+                now.format("%Y-%m-%d %H:%M:%S"),
+                now.timestamp_subsec_millis()
             );
 
             assert!(check_content_respects_mod(&glwe, ciphertext_modulus));

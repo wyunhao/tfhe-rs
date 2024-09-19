@@ -137,7 +137,6 @@ impl<G: ByteRandomGenerator> NoiseRandomGenerator<G> {
         Scalar: UnsignedInteger + RandomGenerable<Uniform>,
         // (Scalar, Scalar): RandomGenerable<Uniform>,
     {
-        println!("Generating noise here?");
         self.gen.fill_slice_with_random_uniform_custom_mod(
             output,
             custom_modulus,
@@ -154,7 +153,6 @@ impl<G: ByteRandomGenerator> NoiseRandomGenerator<G> {
         Scalar: UnsignedInteger,
         (Scalar, Scalar): RandomGenerable<Gaussian<f64>, CustomModulus = f64>,
     {
-        println!("Generating noise here?");
         self.gen.fill_slice_with_random_gaussian_custom_mod(
             output,
             0.,

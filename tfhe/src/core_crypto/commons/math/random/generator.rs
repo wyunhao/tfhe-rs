@@ -216,9 +216,11 @@ impl<G: ByteRandomGenerator> RandomGenerator<G> {
 
         if !custom_modulus.is_native_modulus() {
             output.as_mut().iter_mut().for_each(|x| {
-                *x = (*x).wrapping_rem(custom_modulus.get_custom_modulus().cast_into())
+                // *x = (*x).wrapping_rem(custom_modulus.get_custom_modulus().cast_into());
+                *x = (*x).wrapping_rem(Scalar::ONE << (Scalar::BITS - 6)); // can have 3 bits to msg
             });
         }
+        // println!("noise: {}", &output);
     }
 
     /// Generate a random uniform binary value.

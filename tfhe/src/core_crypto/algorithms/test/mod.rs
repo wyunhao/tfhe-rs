@@ -143,6 +143,7 @@ pub fn get_encoding_with_padding<Scalar: UnsignedInteger>(
     if ciphertext_modulus.is_native_modulus() {
         Scalar::ONE << (Scalar::BITS - 1)
     } else {
+        println!("this?");
         Scalar::cast_from(ciphertext_modulus.get_custom_modulus() / 2)
     }
 }

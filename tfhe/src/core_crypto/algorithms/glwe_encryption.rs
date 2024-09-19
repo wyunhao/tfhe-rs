@@ -317,6 +317,7 @@ pub fn encrypt_seeded_glwe_ciphertext_assign_with_existing_generator<
 
 /// Convenience function to share the core logic of the GLWE encryption between all functions
 /// needing it.
+/// note: mask is the a part, and body is the b part
 pub fn fill_glwe_mask_and_body_for_encryption<KeyCont, InputCont, BodyCont, MaskCont, Scalar, Gen>(
     glwe_secret_key: &GlweSecretKey<KeyCont>,
     output_mask: &mut GlweMask<MaskCont>,
@@ -332,11 +333,6 @@ pub fn fill_glwe_mask_and_body_for_encryption<KeyCont, InputCont, BodyCont, Mask
     MaskCont: ContainerMut<Element = Scalar>,
     Gen: ByteRandomGenerator,
 {
-    assert_eq!(
-        output_mask.ciphertext_modulus(),
-        output_body.ciphertext_modulus()
-    );
-
     let ciphertext_modulus = output_body.ciphertext_modulus();
 
     assert!(ciphertext_modulus.is_compatible_with_native_modulus());
@@ -351,7 +347,7 @@ pub fn fill_glwe_mask_and_body_for_encryption<KeyCont, InputCont, BodyCont, Mask
     polynomial_wrapping_add_assign(
         &mut output_body.as_mut_polynomial(),
         &encoded.as_polynomial(),
-    );
+    );// TODO: change this to zero!!!
 
     if !ciphertext_modulus.is_native_modulus() {
         let torus_scaling = ciphertext_modulus.get_power_of_two_scaling_to_native_torus();
@@ -364,6 +360,96 @@ pub fn fill_glwe_mask_and_body_for_encryption<KeyCont, InputCont, BodyCont, Mask
         &output_mask.as_polynomial_list(),
         &glwe_secret_key.as_polynomial_list(),
     );
+}
+
+pub fn glwe_encryption_with_pk_mask_and_body<InputCont, BodyCont, MaskCont, Scalar, Gen>(
+    pk_mask: &mut GlweMask<MaskCont>,
+    pk_body: &mut GlweBody<BodyCont>,
+    output_mask: &mut GlweMask<MaskCont>,
+    output_body: &mut GlweBody<BodyCont>,
+    encoded: &PlaintextList<InputCont>,
+    noise_parameters: impl DispersionParameter,
+    generator: &mut EncryptionRandomGenerator<Gen>,
+) where
+    Scalar: UnsignedTorus,
+    InputCont: Container<Element = Scalar>,
+    BodyCont: ContainerMut<Element = Scalar>,
+    MaskCont: ContainerMut<Element = Scalar>,
+    Gen: ByteRandomGenerator,
+{
+
+    let ciphertext_modulus = output_body.ciphertext_modulus();
+    let polynomial_size = output_mask.polynomial_size();
+    let glwe_dimension = output_mask.glwe_dimension();
+
+    // serve as the inner wrapping for output_body, i.e., we first treat it as a mask,
+    // and then transform it back to a body at the end before returning output
+    let mut output_mask_body = GlweBody::from_container(
+        vec![
+            Scalar::ZERO;
+            glwe_ciphertext_mask_size(
+                glwe_dimension,
+                polynomial_size
+            )
+        ],
+        ciphertext_modulus,
+    );
+
+    let mut pk_body_mask = GlweMask::from_container(
+        pk_body.as_mut(),
+        polynomial_size,
+        ciphertext_modulus,
+    );
+
+    // prepare the subset sum vector x
+    let mut x_enc = GlweMask::from_container(
+        vec![
+            Scalar::ZERO;
+            glwe_ciphertext_mask_size(
+                glwe_dimension,
+                polynomial_size
+            )
+        ],
+        polynomial_size,
+        ciphertext_modulus,
+    );
+
+    // data preparation
+    generator.fill_slice_with_random_mask_custom_mod(x_enc.as_mut(), ciphertext_modulus);
+    generator.fill_slice_with_random_mask_custom_mod(output_mask.as_mut(), ciphertext_modulus);
+
+    generator.fill_slice_with_random_uniform_noise_custom_mod(
+        output_body.as_mut(),
+        ciphertext_modulus,
+    );
+    polynomial_wrapping_add_assign(
+        &mut output_body.as_mut_polynomial(),
+        &encoded.as_polynomial(),
+    );
+
+    if !ciphertext_modulus.is_native_modulus() {
+        let torus_scaling = ciphertext_modulus.get_power_of_two_scaling_to_native_torus();
+        slice_wrapping_scalar_mul_assign(output_mask.as_mut(), torus_scaling);
+        slice_wrapping_scalar_mul_assign(output_body.as_mut(), torus_scaling);
+    }
+
+
+    polynomial_wrapping_add_multisum_assign(
+        &mut output_mask_body.as_mut_polynomial(),
+        &x_enc.as_polynomial_list(),
+        &pk_mask.as_polynomial_list(),
+    ); // x * a, need to fill final_mask with final_mask_body
+
+    polynomial_wrapping_add_assign(
+        &mut output_mask.as_mut_polynomial(),
+        &output_mask_body.as_mut_polynomial(),
+    ); // transform output_mask_body back to output_mask
+
+    polynomial_wrapping_add_multisum_assign(
+        &mut output_body.as_mut_polynomial(),
+        &x_enc.as_polynomial_list(),
+        &pk_body_mask.as_polynomial_list(),
+    ); // x * b, need to fill output_body_mask with output_body
 }
 
 /// Encrypt a (scalar) plaintext list in a [`GLWE ciphertext`](`GlweCiphertext`).
@@ -477,13 +563,95 @@ pub fn encrypt_glwe_ciphertext<Scalar, KeyCont, InputCont, OutputCont, Gen>(
     let (mut mask, mut body) = output_glwe_ciphertext.get_mut_mask_and_body();
 
     fill_glwe_mask_and_body_for_encryption(
-        glwe_secret_key,
-        &mut mask,
-        &mut body,
-        input_plaintext_list,
-        noise_parameters,
-        generator,
-    );
+            glwe_secret_key,
+            &mut mask,
+            &mut body,
+            input_plaintext_list,
+            noise_parameters,
+            generator,
+        );
+
+    // let ciphertext_modulus = body.ciphertext_modulus();
+    // let polynomial_size = mask.polynomial_size();
+    // let glwe_dimension = mask.glwe_dimension();
+
+    // let mut pk_body = GlweBody::from_container(
+    //     vec![
+    //         Scalar::ZERO;
+    //         glwe_ciphertext_mask_size(
+    //             glwe_dimension,
+    //             polynomial_size
+    //         )
+    //     ],
+    //     ciphertext_modulus,
+    // );
+
+    // let mut pk_msk = GlweMask::from_container(
+    //     vec![
+    //         Scalar::ZERO;
+    //         glwe_ciphertext_mask_size(
+    //             glwe_dimension,
+    //             polynomial_size
+    //         )
+    //     ],
+    //     polynomial_size,
+    //     ciphertext_modulus,
+    // );
+
+    // let mut output_body = GlweBody::from_container(
+    //     vec![
+    //         Scalar::ZERO;
+    //         glwe_ciphertext_mask_size(
+    //             glwe_dimension,
+    //             polynomial_size
+    //         )
+    //     ],
+    //     ciphertext_modulus,
+    // );
+
+    // let mut output_msk = GlweMask::from_container(
+    //     vec![
+    //         Scalar::ZERO;
+    //         glwe_ciphertext_mask_size(
+    //             glwe_dimension,
+    //             polynomial_size
+    //         )
+    //     ],
+    //     polynomial_size,
+    //     ciphertext_modulus,
+    // );
+
+
+    // fill_glwe_mask_and_body_for_encryption(
+    //     glwe_secret_key,
+    //     &mut pk_msk,
+    //     &mut pk_body,
+    //     input_plaintext_list,
+    //     noise_parameters,
+    //     generator,
+    // );
+
+    // glwe_encryption_with_pk_mask_and_body(
+    //     &mut pk_msk,
+    //     &mut pk_body,
+    //     &mut output_msk,
+    //     &mut output_body,
+    //     input_plaintext_list,
+    //     noise_parameters,
+    //     generator,
+    // );
+
+    // mask = GlweMask::from_container(
+    //     output_msk.as_mut(),
+    //     polynomial_size,
+    //     ciphertext_modulus,
+    // );
+
+    // body = GlweBody::from_container(
+    //     output_body.as_mut(),
+    //     ciphertext_modulus,
+    // );
+
 }
 
 /// Encrypt a (scalar) plaintext list in [`GLWE ciphertexts`](`GlweCiphertext`) of the output

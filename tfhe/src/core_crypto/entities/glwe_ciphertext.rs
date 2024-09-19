@@ -184,6 +184,13 @@ impl<Scalar: UnsignedInteger, C: ContainerMut<Element = Scalar>> GlweMask<C> {
     }
 }
 
+ // CAUTION!!!!! only used when polynomial_size = self.data.container_len()
+impl<Scalar: UnsignedInteger, C: ContainerMut<Element = Scalar>> GlweMask<C> {
+    pub fn as_mut_polynomial(&mut self) -> PolynomialMutView<'_, C::Element> {
+        PolynomialMutView::from_container(self.as_mut())
+    }
+}
+
 impl<T: UnsignedInteger, C: Container<Element = T>> AsRef<[T]> for GlweMask<C> {
     fn as_ref(&self) -> &[T] {
         self.data.as_ref()

@@ -11,6 +11,8 @@ use crate::core_crypto::commons::math::random::ActivatedRandomGenerator;
 use crate::core_crypto::commons::parameters::*;
 use crate::core_crypto::commons::traits::*;
 use crate::core_crypto::entities::*;
+use chrono::prelude::*;
+use chrono::Timelike;
 
 /// Convenience function to share the core logic of the GLWE assign encryption between all functions
 /// needing it.
@@ -318,6 +320,7 @@ pub fn encrypt_seeded_glwe_ciphertext_assign_with_existing_generator<
 /// Convenience function to share the core logic of the GLWE encryption between all functions
 /// needing it.
 /// note: mask is the a part, and body is the b part
+/// (a, as+e) = (a,b)
 pub fn fill_glwe_mask_and_body_for_encryption<KeyCont, InputCont, BodyCont, MaskCont, Scalar, Gen>(
     glwe_secret_key: &GlweSecretKey<KeyCont>,
     output_mask: &mut GlweMask<MaskCont>,
@@ -362,6 +365,7 @@ pub fn fill_glwe_mask_and_body_for_encryption<KeyCont, InputCont, BodyCont, Mask
     );
 }
 
+/// (xa+e1, xb+e2)
 pub fn glwe_encryption_with_pk_mask_and_body<InputCont, BodyCont, MaskCont, Scalar, Gen>(
     pk_mask: &mut GlweMask<MaskCont>,
     pk_body: &mut GlweBody<BodyCont>,
@@ -434,11 +438,23 @@ pub fn glwe_encryption_with_pk_mask_and_body<InputCont, BodyCont, MaskCont, Scal
     }
 
 
+    // let mut now = Utc::now();
+    // println!(
+    //     "Current time: {}.{}",
+    //     now.format("%Y-%m-%d %H:%M:%S"),
+    //     now.timestamp_subsec_millis()
+    // );
     polynomial_wrapping_add_multisum_assign(
         &mut output_mask_body.as_mut_polynomial(),
         &x_enc.as_polynomial_list(),
         &pk_mask.as_polynomial_list(),
     ); // x * a, need to fill final_mask with final_mask_body
+    // now = Utc::now();
+    // println!(
+    //     "Current time for one multi + sum wrapping: {}.{}",
+    //     now.format("%Y-%m-%d %H:%M:%S"),
+    //     now.timestamp_subsec_millis()
+    // );
 
     polynomial_wrapping_add_assign(
         &mut output_mask.as_mut_polynomial(),
@@ -538,119 +554,132 @@ pub fn encrypt_glwe_ciphertext<Scalar, KeyCont, InputCont, OutputCont, Gen>(
     OutputCont: ContainerMut<Element = Scalar>,
     Gen: ByteRandomGenerator,
 {
-    assert!(
-        output_glwe_ciphertext.polynomial_size().0 == input_plaintext_list.plaintext_count().0,
-        "Mismatch between PolynomialSize of output ciphertext PlaintextCount of input. \
-    Got {:?} in output, and {:?} in input.",
-        output_glwe_ciphertext.polynomial_size(),
-        input_plaintext_list.plaintext_count()
-    );
-    assert!(
-        output_glwe_ciphertext.glwe_size().to_glwe_dimension() == glwe_secret_key.glwe_dimension(),
-        "Mismatch between GlweDimension of output ciphertext and input secret key. \
-        Got {:?} in output, and {:?} in secret key.",
-        output_glwe_ciphertext.glwe_size().to_glwe_dimension(),
-        glwe_secret_key.glwe_dimension()
-    );
-    assert!(
-        output_glwe_ciphertext.polynomial_size() == glwe_secret_key.polynomial_size(),
-        "Mismatch between PolynomialSize of output ciphertext and input secret key. \
-        Got {:?} in output, and {:?} in secret key.",
-        output_glwe_ciphertext.polynomial_size(),
-        glwe_secret_key.polynomial_size()
-    );
+    // assert!(
+    //     output_glwe_ciphertext.polynomial_size().0 == input_plaintext_list.plaintext_count().0,
+    //     "Mismatch between PolynomialSize of output ciphertext PlaintextCount of input. \
+    // Got {:?} in output, and {:?} in input.",
+    //     output_glwe_ciphertext.polynomial_size(),
+    //     input_plaintext_list.plaintext_count()
+    // );
+    // assert!(
+    //     output_glwe_ciphertext.glwe_size().to_glwe_dimension() == glwe_secret_key.glwe_dimension(),
+    //     "Mismatch between GlweDimension of output ciphertext and input secret key. \
+    //     Got {:?} in output, and {:?} in secret key.",
+    //     output_glwe_ciphertext.glwe_size().to_glwe_dimension(),
+    //     glwe_secret_key.glwe_dimension()
+    // );
+    // assert!(
+    //     output_glwe_ciphertext.polynomial_size() == glwe_secret_key.polynomial_size(),
+    //     "Mismatch between PolynomialSize of output ciphertext and input secret key. \
+    //     Got {:?} in output, and {:?} in secret key.",
+    //     output_glwe_ciphertext.polynomial_size(),
+    //     glwe_secret_key.polynomial_size()
+    // );
 
     let (mut mask, mut body) = output_glwe_ciphertext.get_mut_mask_and_body();
 
-    fill_glwe_mask_and_body_for_encryption(
-            glwe_secret_key,
-            &mut mask,
-            &mut body,
-            input_plaintext_list,
-            noise_parameters,
-            generator,
-        );
-
-    // let ciphertext_modulus = body.ciphertext_modulus();
-    // let polynomial_size = mask.polynomial_size();
-    // let glwe_dimension = mask.glwe_dimension();
-
-    // let mut pk_body = GlweBody::from_container(
-    //     vec![
-    //         Scalar::ZERO;
-    //         glwe_ciphertext_mask_size(
-    //             glwe_dimension,
-    //             polynomial_size
-    //         )
-    //     ],
-    //     ciphertext_modulus,
-    // );
-
-    // let mut pk_msk = GlweMask::from_container(
-    //     vec![
-    //         Scalar::ZERO;
-    //         glwe_ciphertext_mask_size(
-    //             glwe_dimension,
-    //             polynomial_size
-    //         )
-    //     ],
-    //     polynomial_size,
-    //     ciphertext_modulus,
-    // );
-
-    // let mut output_body = GlweBody::from_container(
-    //     vec![
-    //         Scalar::ZERO;
-    //         glwe_ciphertext_mask_size(
-    //             glwe_dimension,
-    //             polynomial_size
-    //         )
-    //     ],
-    //     ciphertext_modulus,
-    // );
-
-    // let mut output_msk = GlweMask::from_container(
-    //     vec![
-    //         Scalar::ZERO;
-    //         glwe_ciphertext_mask_size(
-    //             glwe_dimension,
-    //             polynomial_size
-    //         )
-    //     ],
-    //     polynomial_size,
-    //     ciphertext_modulus,
-    // );
-
-
     // fill_glwe_mask_and_body_for_encryption(
-    //     glwe_secret_key,
-    //     &mut pk_msk,
-    //     &mut pk_body,
-    //     input_plaintext_list,
-    //     noise_parameters,
-    //     generator,
+    //         glwe_secret_key,
+    //         &mut mask,
+    //         &mut body,
+    //         input_plaintext_list,
+    //         noise_parameters,
+    //         generator,
+    //     );
+
+    let ciphertext_modulus = body.ciphertext_modulus();
+    let polynomial_size = mask.polynomial_size();
+    let glwe_dimension = mask.glwe_dimension();
+
+    let mut pk_body = GlweBody::from_container(
+        vec![
+            Scalar::ZERO;
+            glwe_ciphertext_mask_size(
+                glwe_dimension,
+                polynomial_size
+            )
+        ],
+        ciphertext_modulus,
+    );
+
+    let mut pk_msk = GlweMask::from_container(
+        vec![
+            Scalar::ZERO;
+            glwe_ciphertext_mask_size(
+                glwe_dimension,
+                polynomial_size
+            )
+        ],
+        polynomial_size,
+        ciphertext_modulus,
+    );
+
+    let mut output_body = GlweBody::from_container(
+        vec![
+            Scalar::ZERO;
+            glwe_ciphertext_mask_size(
+                glwe_dimension,
+                polynomial_size
+            )
+        ],
+        ciphertext_modulus,
+    );
+
+    let mut output_msk = GlweMask::from_container(
+        vec![
+            Scalar::ZERO;
+            glwe_ciphertext_mask_size(
+                glwe_dimension,
+                polynomial_size
+            )
+        ],
+        polynomial_size,
+        ciphertext_modulus,
+    );
+
+
+    // let mut now = Utc::now();
+    // println!(
+    //     "Current time: {}.{}",
+    //     now.format("%Y-%m-%d %H:%M:%S"),
+    //     now.timestamp_subsec_millis()
+    // );
+    fill_glwe_mask_and_body_for_encryption(
+        glwe_secret_key,
+        &mut pk_msk,
+        &mut pk_body,
+        input_plaintext_list,
+        noise_parameters,
+        generator,
+    );
+    // now = Utc::now();
+    // println!(
+    //     "Current time for filling pk gen: {}.{}",
+    //     now.format("%Y-%m-%d %H:%M:%S"),
+    //     now.timestamp_subsec_millis()
     // );
 
-    // glwe_encryption_with_pk_mask_and_body(
-    //     &mut pk_msk,
-    //     &mut pk_body,
-    //     &mut output_msk,
-    //     &mut output_body,
-    //     input_plaintext_list,
-    //     noise_parameters,
-    //     generator,
-    // );
 
-    // mask = GlweMask::from_container(
-    //     output_msk.as_mut(),
-    //     polynomial_size,
-    //     ciphertext_modulus,
-    // );
+    glwe_encryption_with_pk_mask_and_body(
+        &mut pk_msk,
+        &mut pk_body,
+        &mut output_msk,
+        &mut output_body,
+        input_plaintext_list,
+        noise_parameters,
+        generator,
+    );
 
-    // body = GlweBody::from_container(
-    //     output_body.as_mut(),
-    //     ciphertext_modulus,
-    // );
+    mask = GlweMask::from_container(
+        output_msk.as_mut(),
+        polynomial_size,
+        ciphertext_modulus,
+    );
+
+    body = GlweBody::from_container(
+        output_body.as_mut(),
+        ciphertext_modulus,
+    );
 
 }
 

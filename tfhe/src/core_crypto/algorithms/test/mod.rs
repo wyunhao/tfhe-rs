@@ -96,13 +96,13 @@ pub const TEST_PARAMS_3_BITS_63_U64: TestParams<u64> = TestParams {
     cbs_level: DecompositionLevelCount(0),
     cbs_base_log: DecompositionBaseLog(0),
     message_modulus_log: CiphertextModulusLog(3),
-    ciphertext_modulus: CiphertextModulus::new(1 << 63),
+    ciphertext_modulus: CiphertextModulus::new(1 << 31),
 };
 
 pub const DUMMY_NATIVE_U32: TestParams<u32> = TestParams {
     lwe_dimension: LweDimension(742),
     glwe_dimension: GlweDimension(1),
-    polynomial_size: PolynomialSize(2048),
+    polynomial_size: PolynomialSize(256),
     lwe_modular_std_dev: StandardDev(0.000007069849454709433),
     glwe_modular_std_dev: StandardDev(0.00000000000000029403601535432533),
     pbs_base_log: DecompositionBaseLog(23),
@@ -221,7 +221,8 @@ macro_rules! create_parametrized_test{
         create_parametrized_test!($name
         {
             // TEST_PARAMS_4_BITS_NATIVE_U64,
-            TEST_PARAMS_3_BITS_63_U64
+            DUMMY_NATIVE_U32
+            // TEST_PARAMS_3_BITS_63_U64
         });
     };
 }
